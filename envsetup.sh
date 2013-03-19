@@ -1229,3 +1229,5 @@ source_vendorsetup
 addcompletions
 
 . $T/vendor/yaap/build/envsetup.sh
+
+export ANDROID_BUILD_TOP=$(gettop)
