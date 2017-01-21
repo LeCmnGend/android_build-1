@@ -2914,7 +2914,7 @@ class PasswordManager(object):
               ps = subprocess.Popen(self.secure_storage_cmd, shell=True, stdout=subprocess.PIPE)
               output = ps.communicate()[0]
               if ps.returncode == 0:
-                current[i] = output
+                current[i] = output.decode('utf-8')
             except Exception as e:
               print(e)
               pass
@@ -2922,6 +2922,8 @@ class PasswordManager(object):
             missing.append(i)
       # Are all the passwords already in the file?
       if not missing:
+        if "ANDROID_SECURE_STORAGE_CMD" in os.environ:
+          del os.environ["ANDROID_SECURE_STORAGE_CMD"]
         return current
 
       for i in missing:
