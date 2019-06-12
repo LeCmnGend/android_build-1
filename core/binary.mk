@@ -893,7 +893,7 @@ $(dotdot_objects) $(cpp_objects): PRIVATE_ARM_CFLAGS := $(normal_objects_cflags)
 ifneq ($(strip $(cpp_objects)),)
 $(cpp_objects): $(intermediates)/%.o: \
     $(TOPDIR)$(LOCAL_PATH)/%$(LOCAL_CPP_EXTENSION) \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG_CXX)
 	$(transform-$(PRIVATE_HOST)cpp-to-o)
 $(call include-depfiles-for-objs, $(cpp_objects))
 endif
@@ -914,7 +914,7 @@ $(gen_cpp_objects): PRIVATE_ARM_MODE := $(normal_objects_mode)
 $(gen_cpp_objects): PRIVATE_ARM_CFLAGS := $(normal_objects_cflags)
 $(gen_cpp_objects): $(intermediates)/%.o: \
     $(intermediates)/%$(LOCAL_CPP_EXTENSION) \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG_CXX)
 	$(transform-$(PRIVATE_HOST)cpp-to-o)
 $(call include-depfiles-for-objs, $(gen_cpp_objects))
 endif
@@ -929,7 +929,7 @@ $(call track-gen-file-obj,$(gen_S_sources),$(gen_S_objects))
 
 ifneq ($(strip $(gen_S_sources)),)
 $(gen_S_objects): $(intermediates)/%.o: $(intermediates)/%.S \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)s-to-o)
 $(call include-depfiles-for-objs, $(gen_S_objects))
 endif
@@ -940,7 +940,7 @@ $(call track-gen-file-obj,$(gen_s_sources),$(gen_s_objects))
 
 ifneq ($(strip $(gen_s_objects)),)
 $(gen_s_objects): $(intermediates)/%.o: $(intermediates)/%.s \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)s-to-o)
 endif
 
@@ -978,7 +978,7 @@ $(dotdot_objects) $(c_objects): PRIVATE_ARM_CFLAGS := $(normal_objects_cflags)
 
 ifneq ($(strip $(c_objects)),)
 $(c_objects): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.c \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)c-to-o)
 $(call include-depfiles-for-objs, $(c_objects))
 endif
@@ -998,7 +998,7 @@ ifneq ($(strip $(gen_c_objects)),)
 $(gen_c_objects): PRIVATE_ARM_MODE := $(normal_objects_mode)
 $(gen_c_objects): PRIVATE_ARM_CFLAGS := $(normal_objects_cflags)
 $(gen_c_objects): $(intermediates)/%.o: $(intermediates)/%.c \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)c-to-o)
 $(call include-depfiles-for-objs, $(gen_c_objects))
 endif
@@ -1014,7 +1014,7 @@ $(call track-src-file-obj,$(objc_sources),$(objc_objects))
 ifneq ($(strip $(objc_objects)),)
 my_soong_problems += objc
 $(objc_objects): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.m \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)m-to-o)
 $(call include-depfiles-for-objs, $(objc_objects))
 endif
@@ -1029,7 +1029,7 @@ $(call track-src-file-obj,$(objcpp_sources),$(objcpp_objects))
 
 ifneq ($(strip $(objcpp_objects)),)
 $(objcpp_objects): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.mm \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG_CXX)
 	$(transform-$(PRIVATE_HOST)mm-to-o)
 $(call include-depfiles-for-objs, $(objcpp_objects))
 endif
@@ -1053,7 +1053,7 @@ $(call track-src-file-obj,$(dotdot_sources),$(dotdot_objects_S))
 
 ifneq ($(strip $(asm_objects_S)),)
 $(asm_objects_S): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.S \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)s-to-o)
 $(call include-depfiles-for-objs, $(asm_objects_S))
 endif
@@ -1073,7 +1073,7 @@ $(call track-src-file-obj,$(dotdot_sources),$(dotdot_objects_s))
 
 ifneq ($(strip $(asm_objects_s)),)
 $(asm_objects_s): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.s \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(CLANG)
 	$(transform-$(PRIVATE_HOST)s-to-o)
 endif
 
@@ -1086,7 +1086,7 @@ asm_sources_asm := $(filter %.asm,$(my_src_files))
 ifneq ($(strip $(asm_sources_asm)),)
 asm_objects_asm := $(addprefix $(intermediates)/,$(asm_sources_asm:.asm=.o))
 $(asm_objects_asm): $(intermediates)/%.o: $(TOPDIR)$(LOCAL_PATH)/%.asm \
-    $(my_additional_dependencies)
+    $(my_additional_dependencies) $(YASM)
 	$(transform-asm-to-o)
 $(call track-src-file-obj,$(asm_sources_asm),$(asm_objects_asm))
 
