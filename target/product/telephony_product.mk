@@ -20,5 +20,3 @@
 # /product packages
 PRODUCT_PACKAGES += \
     CarrierConfig \
-    Dialer \
-    EmergencyInfo \
