@@ -264,3 +264,7 @@ org\.ifaa\.android\.manager.*
 com\.nvidia\.*
 com\.nvidia\.profilemanager\.*
 com\.nvidia\.NvCPLSvc\.*
+
+###################################################
+# LineageOS
+vendor.lineage.touch.*
