@@ -706,7 +706,7 @@ $(foreach m,$(ALL_MODULES), \
     $(eval r := $(call module-installed-files,$(r))) \
     $(eval h_m := $(filter $(HOST_OUT)/%, $(ALL_MODULES.$(m).INSTALLED))) \
     $(eval h_r := $(filter $(HOST_OUT)/%, $(r))) \
-    $(eval h_m := $(filter-out $(h_r), $(h_m))) \
+    $(eval h_r := $(filter-out $(h_m), $(h_r))) \
     $(if $(h_m), $(eval $(call add-required-deps, $(h_m),$(h_r)))) \
   ) \
 )
@@ -722,7 +722,7 @@ $(foreach m,$(ALL_MODULES), \
     $(eval r := $(call module-installed-files,$(r))) \
     $(eval hc_m := $(filter $(HOST_CROSS_OUT)/%, $(ALL_MODULES.$(m).INSTALLED))) \
     $(eval hc_r := $(filter $(HOST_CROSS_OUT)/%, $(r))) \
-    $(eval hc_m := $(filter-out $(hc_r), $(hc_m))) \
+    $(eval hc_r := $(filter-out $(hc_m), $(hc_r))) \
     $(if $(hc_m), $(eval $(call add-required-deps, $(hc_m),$(hc_r)))) \
   ) \
 )
@@ -738,7 +738,7 @@ $(foreach m,$(ALL_MODULES), \
     $(eval r := $(call module-installed-files,$(r))) \
     $(eval t_m := $(filter $(TARGET_OUT_ROOT)/%, $(ALL_MODULES.$(m).INSTALLED))) \
     $(eval t_r := $(filter $(TARGET_OUT_ROOT)/%, $(r))) \
-    $(eval t_m := $(filter-out $(t_r), $(t_m))) \
+    $(eval t_r := $(filter-out $(t_m), $(t_r))) \
     $(if $(t_m), $(eval $(call add-required-deps, $(t_m),$(t_r)))) \
   ) \
 )
@@ -765,7 +765,6 @@ $(foreach m,$(ALL_MODULES), \
     )\
     $(eval req_files := $(strip $(req_files)))\
     $(eval mod_files := $(filter $(HOST_OUT)/%, $(call module-installed-files,$(m)))) \
-    $(eval mod_files := $(filter-out $(req_files),$(mod_files)))\
     $(if $(mod_files),\
       $(eval $(call add-required-deps, $(mod_files),$(req_files))) \
     )\
@@ -794,7 +793,6 @@ $(foreach m,$(ALL_MODULES), \
     )\
     $(eval req_files := $(strip $(req_files)))\
     $(eval mod_files := $(filter $(TARGET_OUT_ROOT)/%, $(call module-installed-files,$(m))))\
-    $(eval mod_files := $(filter-out $(req_files),$(mod_files)))\
     $(if $(mod_files),\
       $(eval $(call add-required-deps, $(mod_files),$(req_files))) \
     )\
