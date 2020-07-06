@@ -188,6 +188,10 @@ ifdef LOCAL_SOONG_LINT_REPORTS
   ALL_MODULES.$(my_register_name).LINT_REPORTS := $(LOCAL_SOONG_LINT_REPORTS)
 endif
 
+ifdef LOCAL_SOONG_LINT_REPORTS
+  ALL_MODULES.$(my_register_name).LINT_REPORTS := $(LOCAL_SOONG_LINT_REPORTS)
+endif
+
 ifndef LOCAL_IS_HOST_MODULE
 ifeq ($(LOCAL_SDK_VERSION),system_current)
 my_link_type := java:system
