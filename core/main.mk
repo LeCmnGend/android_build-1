@@ -1496,6 +1496,12 @@ vbmetaimage: $(INSTALLED_VBMETAIMAGE_TARGET)
 .PHONY: auxiliary
 auxiliary: $(INSTALLED_AUX_TARGETS)
 
+.PHONY: vbmetasystemimage
+vbmetasystemimage: $(INSTALLED_VBMETA_SYSTEMIMAGE_TARGET)
+
+.PHONY: vbmetavendorimage
+vbmetavendorimage: $(INSTALLED_VBMETA_VENDORIMAGE_TARGET)
+
 # Build files and then package it into the rom formats
 .PHONY: droidcore
 droidcore: $(filter $(HOST_OUT_ROOT)/%,$(modules_to_install)) \
@@ -1507,6 +1513,8 @@ droidcore: $(filter $(HOST_OUT_ROOT)/%,$(modules_to_install)) \
     $(INSTALLED_DEBUG_BOOTIMAGE_TARGET) \
     $(INSTALLED_RECOVERYIMAGE_TARGET) \
     $(INSTALLED_VBMETAIMAGE_TARGET) \
+    $(INSTALLED_VBMETA_SYSTEMIMAGE_TARGET) \
+    $(INSTALLED_VBMETA_VENDORIMAGE_TARGET) \
     $(INSTALLED_USERDATAIMAGE_TARGET) \
     $(INSTALLED_CACHEIMAGE_TARGET) \
     $(INSTALLED_BPTIMAGE_TARGET) \
