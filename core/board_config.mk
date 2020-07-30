@@ -205,12 +205,10 @@ $(foreach var,$(_board_true_false_vars), \
 TARGET_CPU_VARIANT_RUNTIME := $(or $(TARGET_CPU_VARIANT_RUNTIME),$(TARGET_CPU_VARIANT))
 TARGET_2ND_CPU_VARIANT_RUNTIME := $(or $(TARGET_2ND_CPU_VARIANT_RUNTIME),$(TARGET_2ND_CPU_VARIANT))
 
-ifdef TARGET_ARCH
-  # The combo makefiles check and set defaults for various CPU configuration
-  combo_target := TARGET_
-  combo_2nd_arch_prefix :=
-  include $(BUILD_SYSTEM)/combo/select.mk
-endif
+# The combo makefiles check and set defaults for various CPU configuration
+combo_target := TARGET_
+combo_2nd_arch_prefix :=
+include $(BUILD_SYSTEM)/combo/select.mk
 
 ifdef TARGET_2ND_ARCH
   combo_2nd_arch_prefix := $(TARGET_2ND_ARCH_VAR_PREFIX)
