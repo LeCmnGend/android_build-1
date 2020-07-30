@@ -146,6 +146,8 @@ $(call add_json_bool, Malloc_not_svelte,                 $(call invert_bool,$(fi
 $(call add_json_bool, Malloc_not_svelte_libc32,          $(if $(MALLOC_SVELTE_FOR_LIBC32),\
                                                             $(call invert_bool,$(filter true,$(MALLOC_SVELTE_FOR_LIBC32))),\
                                                             $(call invert_bool,$(filter true,$(MALLOC_SVELTE)))))
+$(call add_json_bool, Malloc_zero_contents,              $(call invert_bool,$(filter false,$(MALLOC_ZERO_CONTENTS))))
+$(call add_json_bool, Malloc_pattern_fill_contents,      $(MALLOC_PATTERN_FILL_CONTENTS))
 $(call add_json_str,  Override_rs_driver,                $(OVERRIDE_RS_DRIVER))
 $(call add_json_val,  Product_shipping_api_level,        $(PRODUCT_SHIPPING_API_LEVEL))
 
