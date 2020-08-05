@@ -97,8 +97,9 @@ _board_strip_readonly_list += BOARD_SUPER_PARTITION_SIZE
 _board_strip_readonly_list += BOARD_SUPER_PARTITION_GROUPS
 
 # Kernel related variables
-_board_strip_readonly_list += BOARD_KERNEL_BINARIES
-_board_strip_readonly_list += BOARD_KERNEL_MODULE_INTERFACE_VERSIONS
+_board_strip_readonly_list += \
+  BOARD_KERNEL_BINARIES \
+  BOARD_KERNEL_MODULE_INTERFACE_VERSIONS \
 
 # Variables related to generic kernel image (GKI) and generic boot image
 # - BOARD_USES_GENERIC_KERNEL_IMAGE is the global variable that defines if the
