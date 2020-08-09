@@ -2349,7 +2349,7 @@ endif
 .PHONY: recoveryimage-nodeps
 recoveryimage-nodeps:
 	@echo "make $@: ignoring dependencies"
-	$(call build-recoveryimage-target, $(INSTALLED_RECOVERYIMAGE_TARGET))
+	$(call build-recoveryimage-target, $(INSTALLED_RECOVERYIMAGE_TARGET), $(recovery_kernel))
 
 else # BUILDING_RECOVERY_IMAGE
 RECOVERY_RESOURCE_ZIP :=
