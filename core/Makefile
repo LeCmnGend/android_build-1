@@ -4771,7 +4771,7 @@ endif
 ifeq ($(strip $(BOARD_KERNEL_SEPARATED_DT)),true)
 	$(hide) $(ACP) $(INSTALLED_DTIMAGE_TARGET) $(zip_root)/$(PRIVATE_RECOVERY_OUT)/dt
 endif
-endif # INSTALLED_VENDOR_BOOTIMAGE_TARGET not defined
+endif # not (BUILDING_VENDOR_BOOT_IMAGE and AB_OTA_UPDATER)
 endif # INSTALLED_RECOVERYIMAGE_TARGET defined or BOARD_USES_RECOVERY_AS_BOOT is true
 	@# Components of the boot image
 	$(hide) mkdir -p $(zip_root)/BOOT
