@@ -43,7 +43,6 @@ PARSE_TIME_MAKE_GOALS := \
 	snod \
 	stnod \
 	systemimage-nodeps \
-	target-files-package \
 	test-art% \
 	user \
 	userdataimage \
