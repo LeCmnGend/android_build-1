@@ -4663,6 +4663,11 @@ MK_VBMETA_BOOT_KERNEL_CMDLINE_SH := device/generic/goldfish/tools/mk_vbmeta_boot
 $(BUILT_TARGET_FILES_PACKAGE): $(MK_VBMETA_BOOT_KERNEL_CMDLINE_SH)
 endif
 
+ifdef BOARD_PREBUILT_BOOTLOADER
+$(BUILT_TARGET_FILES_PACKAGE): $(INSTALLED_BOOTLOADER_MODULE)
+droidcore: $(INSTALLED_BOOTLOADER_MODULE)
+endif
+
 # Depending on the various images guarantees that the underlying
 # directories are up-to-date.
 $(BUILT_TARGET_FILES_PACKAGE): \
