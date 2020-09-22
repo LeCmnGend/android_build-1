@@ -2655,6 +2655,7 @@ $(3): $(1)
 	@mkdir -p $(dir $$@)
 	@rm -rf $$@
 	$(hide) ln -sf $(2) $$@
+$(3): .KATI_SYMLINK_OUTPUTS := $(3)
 endef
 
 # Copy an apk to a target location while removing classes*.dex
