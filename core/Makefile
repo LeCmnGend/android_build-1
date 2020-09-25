@@ -2315,6 +2315,7 @@ $(recovery_uncompressed_ramdisk): $(MKBOOTFS) \
 	    $(INSTALLED_2NDBOOTLOADER_TARGET) \
 	    $(INSTALLED_RECOVERY_BUILD_PROP_TARGET) \
 	    $(recovery_resource_deps) $(recovery_root_deps) \
+	    $(INSTALLED_RECOVERY_RAMDISK_BUILD_PROP_TARGET) \
 	    $(recovery_fstab)
 	# Making recovery image
 	mkdir -p $(TARGET_RECOVERY_OUT)
