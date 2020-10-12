@@ -1248,7 +1248,19 @@ endif
 
 INTERNAL_KERNEL_CMDLINE := $(strip $(INTERNAL_KERNEL_CMDLINE) buildvariant=$(TARGET_BUILD_VARIANT) $(VERITY_KEYID))
 
-ifndef BUILDING_VENDOR_BOOT_IMAGE
+boot_uses_generic_kernel_image :=
+ifdef BUILDING_VENDOR_BOOT_IMAGE
+  # building vendor boot image, dtb/base/pagesize go there
+  boot_uses_generic_kernel_image := true
+else ifeq (true,$(BOARD_USES_GENERIC_KERNEL_IMAGE))
+  boot_uses_generic_kernel_image := true
+endif
+
+ifeq (true,$(boot_uses_generic_kernel_image))
+  ifdef GENERIC_KERNEL_CMDLINE
+    INTERNAL_BOOTIMAGE_ARGS += --cmdline "$(GENERIC_KERNEL_CMDLINE)"
+  endif
+else # boot_uses_generic_kernel_image != true
 ifdef BOARD_KERNEL_BASE
   INTERNAL_BOOTIMAGE_ARGS += --base $(BOARD_KERNEL_BASE)
 endif
@@ -1258,12 +1270,8 @@ endif
 ifdef INTERNAL_KERNEL_CMDLINE
   INTERNAL_BOOTIMAGE_ARGS += --cmdline "$(INTERNAL_KERNEL_CMDLINE)"
 endif
-else
-# building vendor boot image, dtb/base/pagesize go there
-ifdef GENERIC_KERNEL_CMDLINE
-  INTERNAL_BOOTIMAGE_ARGS += --cmdline "$(GENERIC_KERNEL_CMDLINE)"
-endif
-endif
+endif # boot_uses_generic_kernel_image == true
+boot_uses_generic_kernel_image :=
 
 INTERNAL_MKBOOTIMG_VERSION_ARGS := \
     --os_version $(PLATFORM_VERSION_LAST_STABLE) \
@@ -2205,17 +2213,23 @@ $(INSTALLED_RECOVERY_BUILD_PROP_TARGET): \
 
 ifeq (truetrue,$(strip $(BUILDING_VENDOR_BOOT_IMAGE))$(strip $(AB_OTA_UPDATER)))
   INTERNAL_RECOVERYIMAGE_ARGS := --ramdisk $(recovery_ramdisk)
+
+ifneq (true,$(BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE))
 ifdef GENERIC_KERNEL_CMDLINE
   INTERNAL_RECOVERYIMAGE_ARGS += --cmdline "$(GENERIC_KERNEL_CMDLINE)"
-endif
+endif # GENERIC_KERNEL_CMDLINE != ""
+endif # BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE != true
+
 else # not (BUILDING_VENDOR_BOOT_IMAGE and AB_OTA_UPDATER)
   INTERNAL_RECOVERYIMAGE_ARGS := \
       $(addprefix --second ,$(INSTALLED_2NDBOOTLOADER_TARGET)) \
       --ramdisk $(recovery_ramdisk)
 # Assumes this has already been stripped
+ifneq (true,$(BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE))
 ifdef INTERNAL_KERNEL_CMDLINE
   INTERNAL_RECOVERYIMAGE_ARGS += --cmdline "$(INTERNAL_KERNEL_CMDLINE)"
-endif
+endif # INTERNAL_KERNEL_CMDLINE != ""
+endif # BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE != true
 ifdef BOARD_KERNEL_BASE
   INTERNAL_RECOVERYIMAGE_ARGS += --base $(BOARD_KERNEL_BASE)
 endif
@@ -4810,7 +4824,9 @@ else # BOARD_USES_RECOVERY_AS_BOOT not true
 endif
 endif
 ifeq (truetrue,$(strip $(BUILDING_VENDOR_BOOT_IMAGE))$(strip $(AB_OTA_UPDATER)))
+ifneq (true,$(BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE))
 	echo "$(GENERIC_KERNEL_CMDLINE)" > $(zip_root)/$(PRIVATE_RECOVERY_OUT)/cmdline
+endif # BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE != true
 else # not (BUILDING_VENDOR_BOOT_IMAGE and AB_OTA_UPDATER)
 ifdef INSTALLED_2NDBOOTLOADER_TARGET
 	cp $(INSTALLED_2NDBOOTLOADER_TARGET) $(zip_root)/$(PRIVATE_RECOVERY_OUT)/second
@@ -4828,9 +4844,11 @@ endif
 ifdef INSTALLED_DTBIMAGE_TARGET
 	cp $(INSTALLED_DTBIMAGE_TARGET) $(zip_root)/$(PRIVATE_RECOVERY_OUT)/dtb
 endif
+ifneq (true,$(BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE))
 ifdef INTERNAL_KERNEL_CMDLINE
 	echo "$(INTERNAL_KERNEL_CMDLINE)" > $(zip_root)/$(PRIVATE_RECOVERY_OUT)/cmdline
-endif
+endif # INTERNAL_KERNEL_CMDLINE != ""
+endif # BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE != true
 ifdef BOARD_KERNEL_BASE
 	echo "$(BOARD_KERNEL_BASE)" > $(zip_root)/$(PRIVATE_RECOVERY_OUT)/base
 endif
@@ -4859,14 +4877,18 @@ endif
 ifdef INSTALLED_KERNEL_TARGET
 	$(hide) cp $(INSTALLED_KERNEL_TARGET) $(zip_root)/BOOT/
 endif
-ifndef INSTALLED_VENDOR_BOOTIMAGE_TARGET
+ifdef INSTALLED_VENDOR_BOOTIMAGE_TARGET
+	echo "$(GENERIC_KERNEL_CMDLINE)" > $(zip_root)/BOOT/cmdline
+else ifeq (true,$(BOARD_USES_GENERIC_KERNEL_IMAGE))
+	echo "$(GENERIC_KERNEL_CMDLINE)" > $(zip_root)/BOOT/cmdline
+else # INSTALLED_VENDOR_BOOTIMAGE_TARGET == "" && BOARD_USES_GENERIC_KERNEL_IMAGE != true
+	echo "$(INTERNAL_KERNEL_CMDLINE)" > $(zip_root)/BOOT/cmdline
 ifdef INSTALLED_2NDBOOTLOADER_TARGET
 	cp $(INSTALLED_2NDBOOTLOADER_TARGET) $(zip_root)/BOOT/second
 endif
 ifdef INSTALLED_DTBIMAGE_TARGET
 	cp $(INSTALLED_DTBIMAGE_TARGET) $(zip_root)/BOOT/dtb
 endif
-	echo "$(INTERNAL_KERNEL_CMDLINE)" > $(zip_root)/BOOT/cmdline
 ifdef BOARD_KERNEL_BASE
 	echo "$(BOARD_KERNEL_BASE)" > $(zip_root)/BOOT/base
 endif
@@ -4876,9 +4898,7 @@ endif
 ifeq ($(strip $(BOARD_KERNEL_SEPARATED_DT)),true)
 	$(hide) $(ACP) $(INSTALLED_DTIMAGE_TARGET) $(zip_root)/BOOT/dt
 endif
-else # INSTALLED_VENDOR_BOOTIMAGE_TARGET defined
-	echo "$(GENERIC_KERNEL_CMDLINE)" > $(zip_root)/BOOT/cmdline
-endif # INSTALLED_VENDOR_BOOTIMAGE_TARGET defined
+endif # INSTALLED_VENDOR_BOOTIMAGE_TARGET == "" && BOARD_USES_GENERIC_KERNEL_IMAGE != true
 endif # BOARD_USES_RECOVERY_AS_BOOT not true
 	$(hide) $(foreach t,$(INSTALLED_RADIOIMAGE_TARGET),\
 	            mkdir -p $(zip_root)/RADIO; \
