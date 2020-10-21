@@ -242,6 +242,8 @@ $(call add_json_str,  ShippingApiLevel, $(PRODUCT_SHIPPING_API_LEVEL))
 
 $(call add_json_bool, BuildBrokenVendorPropertyNamespace, $(BUILD_BROKEN_VENDOR_PROPERTY_NAMESPACE))
 
+$(call add_json_bool, BoardMoveRecoveryResourcesToVendorBoot, $(BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT))
+
 $(call json_end)
 
 $(file >$(SOONG_VARIABLES).tmp,$(json_contents))
