@@ -68,7 +68,26 @@ BOARD_RAMDISK_USE_LZ4 := true
 BOARD_BOOT_HEADER_VERSION := 3
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
 
-BOARD_KERNEL_BINARIES := kernel-4.19-gz kernel-5.4 kernel-5.4-gz kernel-5.4-lz4
+BOARD_KERNEL_BINARIES := kernel-4.19-gz kernel-5.4 kernel-5.4-gz kernel-5.4-lz4 \
+    kernel-mainline kernel-mainline-gz kernel-mainline-lz4
+ifneq (,$(filter userdebug eng,$(TARGET_BUILD_VARIANT)))
+BOARD_KERNEL_BINARIES += kernel-5.4-allsyms kernel-5.4-gz-allsyms kernel-5.4-lz4-allsyms
+endif
+
+# Boot image
+BOARD_USES_RECOVERY_AS_BOOT :=
+TARGET_NO_KERNEL := false
+BOARD_USES_GENERIC_KERNEL_IMAGE := true
+BOARD_KERNEL_MODULE_INTERFACE_VERSIONS := 5.4-android12-0
+# Copy boot image in $OUT to target files. This is defined for targets where
+# the installed GKI APEXes are built from source.
+BOARD_COPY_BOOT_IMAGE_TO_TARGET_FILES := true
+
+# No vendor_boot
+BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT :=
+
+# No recovery
+BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE :=
 
 # Some vendors still haven't cleaned up all device specific directories under
 # root!

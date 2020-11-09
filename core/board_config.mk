@@ -96,9 +96,12 @@ _board_strip_readonly_list += \
 #   Update mechanism of the boot image is not enforced by this variable.
 # - BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE controls whether the recovery image
 #   contains a kernel or not.
+# - BOARD_COPY_BOOT_IMAGE_TO_TARGET_FILES controls whether boot images in $OUT are added
+#   to target files package directly.
 _board_strip_readonly_list += \
   BOARD_USES_GENERIC_KERNEL_IMAGE \
   BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE \
+  BOARD_COPY_BOOT_IMAGE_TO_TARGET_FILES \
 
 _build_broken_var_list := \
   BUILD_BROKEN_DUP_RULES \
