@@ -700,3 +700,29 @@ ifndef BUILDING_RECOVERY_IMAGE
     $(error Should not set BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE if not building recovery image)
   endif
 endif
+
+ifndef BUILDING_VENDOR_BOOT_IMAGE
+  ifeq (true,$(BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT))
+    $(error Should not set BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT if not building vendor_boot image)
+  endif
+  ifeq (true,$(BOARD_MOVE_GSI_AVB_KEYS_TO_VENDOR_BOOT))
+    $(error Should not set BOARD_MOVE_GSI_AVB_KEYS_TO_VENDOR_BOOT if not building vendor_boot image)
+  endif
+endif
+
+# If BOARD_USES_GENERIC_KERNEL_IMAGE is set, BOARD_USES_RECOVERY_AS_BOOT must not be set.
+# Devices without a dedicated recovery partition uses BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT to
+# build recovery into vendor_boot.
+ifeq (true,$(BOARD_USES_GENERIC_KERNEL_IMAGE))
+  ifeq (true,$(BOARD_USES_RECOVERY_AS_BOOT))
+    $(error BOARD_USES_RECOVERY_AS_BOOT cannot be true if BOARD_USES_GENERIC_KERNEL_IMAGE is true. \
+      Use BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT instead)
+  endif
+endif
+
+ifeq (true,$(BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT))
+  ifeq (true,$(BOARD_USES_RECOVERY_AS_BOOT))
+    $(error BOARD_MOVE_RECOVERY_RESOURCES_TO_VENDOR_BOOT and BOARD_USES_RECOVERY_AS_BOOT cannot be \
+      both true. Recovery resources should be installed to either boot or vendor_boot, but not both)
+  endif
+endif
