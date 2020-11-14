@@ -4072,7 +4072,7 @@ $(BUILT_KERNEL_CONFIGS_FILE): $(foreach pair,$(my_decompress_tools),$(call word-
 $(BUILT_KERNEL_CONFIGS_FILE): $(EXTRACT_KERNEL) $(INSTALLED_KERNEL_TARGET)
 	$< --tools $(PRIVATE_DECOMPRESS_TOOLS) --input $(INSTALLED_KERNEL_TARGET) \
 	  --output-configs $@ \
-	  --output-version $(BUILT_KERNEL_VERSION_FILE)
+	  --output-release $(BUILT_KERNEL_VERSION_FILE)
 
 my_decompress_tools :=
 
