@@ -140,6 +140,20 @@ ifneq ($(ADDITIONAL_DEFAULT_PROPERTIES),)
 $(error ADDITIONAL_DEFAULT_PROPERTIES is deprecated)
 endif
 
+ifdef TARGET_ARCH_SUITE
+  # TODO(b/175577370): Enable this error.
+  # $(error TARGET_ARCH_SUITE is not supported in kati/make builds)
+endif
+
+# ADDITIONAL_<partition>_PROPERTIES are properties that are determined by the
+# build system itself. Don't let it be defined from outside of the core build
+# system like Android.mk or <product>.mk files.
+_additional_prop_var_names := \
+    ADDITIONAL_SYSTEM_PROPERTIES \
+    ADDITIONAL_VENDOR_PROPERTIES \
+    ADDITIONAL_ODM_PROPERTIES \
+    ADDITIONAL_PRODUCT_PROPERTIES
+
 #
 # -----------------------------------------------------------------
 # Validate ADDITIONAL_BUILD_PROPERTIES.
