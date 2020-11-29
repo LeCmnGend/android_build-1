@@ -3512,6 +3512,26 @@ endif
 
 endif # BOARD_PREBUILT_DTBOIMAGE
 
+# -----------------------------------------------------------------
+# Protected VM firmware image
+ifdef BOARD_PREBUILT_PVMFWIMAGE
+INSTALLED_PVMFWIMAGE_TARGET := $(PRODUCT_OUT)/pvmfw.img
+
+ifeq ($(BOARD_AVB_ENABLE),true)
+$(INSTALLED_PVMFWIMAGE_TARGET): $(BOARD_PREBUILT_PVMFWIMAGE) $(AVBTOOL) $(BOARD_AVB_PVMFW_KEY_PATH)
+	cp $(BOARD_PREBUILT_PVMFWIMAGE) $@
+	$(AVBTOOL) add_hash_footer \
+	    --image $@ \
+	    --partition_size $(BOARD_PVMFWIMG_PARTITION_SIZE) \
+	    --partition_name pvmfw $(INTERNAL_AVB_PVMFW_SIGNING_ARGS) \
+	    $(BOARD_AVB_PVMFW_ADD_HASH_FOOTER_ARGS)
+else
+$(INSTALLED_PVMFWIMAGE_TARGET): $(BOARD_PREBUILT_PVMFWIMAGE)
+	cp $(BOARD_PREBUILT_PVMFWIMAGE) $@
+endif
+
+endif # BOARD_PREBUILT_PVMFWIMAGE
+
 # Returns a list of image targets corresponding to the given list of partitions. For example, it
 # returns "$(INSTALLED_PRODUCTIMAGE_TARGET)" for "product", or "$(INSTALLED_SYSTEMIMAGE_TARGET)
 # $(INSTALLED_VENDORIMAGE_TARGET)" for "system vendor".
@@ -3651,6 +3671,9 @@ BOARD_AVB_ODM_ADD_HASHTREE_FOOTER_ARGS += \
 BOARD_AVB_DTBO_ADD_HASH_FOOTER_ARGS += \
     --prop com.android.build.dtbo.fingerprint:$(BUILD_FINGERPRINT_FROM_FILE)
 
+BOARD_AVB_PVMFW_ADD_HASH_FOOTER_ARGS += \
+    --prop com.android.build.pvmfw.fingerprint:$(BUILD_FINGERPRINT_FROM_FILE)
+
 # The following vendor- and odm-specific images needs explicit SPL set per board.
 ifdef BOOT_SECURITY_PATCH
 BOARD_AVB_BOOT_ADD_HASH_FOOTER_ARGS += \
@@ -3667,9 +3690,25 @@ BOARD_AVB_ODM_ADD_HASHTREE_FOOTER_ARGS += \
     --prop com.android.build.odm.security_patch:$(ODM_SECURITY_PATCH)
 endif
 
+ifdef VENDOR_DLKM_SECURITY_PATCH
+BOARD_AVB_VENDOR_DLKM_ADD_HASHTREE_FOOTER_ARGS += \
+    --prop com.android.build.vendor_dlkm.security_patch:$(VENDOR_DLKM_SECURITY_PATCH)
+endif
+
+ifdef ODM_DLKM_SECURITY_PATCH
+BOARD_AVB_ODM_DLKM_ADD_HASHTREE_FOOTER_ARGS += \
+    --prop com.android.build.odm_dlkm.security_patch:$(ODM_DLKM_SECURITY_PATCH)
+endif
+
+ifdef PVMFW_SECURITY_PATCH
+BOARD_AVB_PVMFW_ADD_HASH_FOOTER_ARGS += \
+    --prop com.android.build.pvmfw.security_patch:$(PVMFW_SECURITY_PATCH)
+endif
+
 BOOT_FOOTER_ARGS := BOARD_AVB_BOOT_ADD_HASH_FOOTER_ARGS
 VENDOR_BOOT_FOOTER_ARGS := BOARD_AVB_VENDOR_BOOT_ADD_HASH_FOOTER_ARGS
 DTBO_FOOTER_ARGS := BOARD_AVB_DTBO_ADD_HASH_FOOTER_ARGS
+PVMFW_FOOTER_ARGS := BOARD_AVB_PVMFW_ADD_HASH_FOOTER_ARGS
 SYSTEM_FOOTER_ARGS := BOARD_AVB_SYSTEM_ADD_HASHTREE_FOOTER_ARGS
 VENDOR_FOOTER_ARGS := BOARD_AVB_VENDOR_ADD_HASHTREE_FOOTER_ARGS
 RECOVERY_FOOTER_ARGS := BOARD_AVB_RECOVERY_ADD_HASH_FOOTER_ARGS
@@ -3774,6 +3813,10 @@ ifdef INSTALLED_DTBOIMAGE_TARGET
 $(eval $(call check-and-set-avb-args,dtbo))
 endif
 
+ifdef INSTALLED_PVMFWIMAGE_TARGET
+$(eval $(call check-and-set-avb-args,pvmfw))
+endif
+
 ifdef INSTALLED_RECOVERYIMAGE_TARGET
 $(eval $(call check-and-set-avb-args,recovery))
 endif
@@ -3853,6 +3896,9 @@ define extract-avb-chain-public-keys
   $(if $(BOARD_AVB_DTBO_KEY_PATH),\
     $(hide) $(AVBTOOL) extract_public_key --key $(BOARD_AVB_DTBO_KEY_PATH) \
       --output $(1)/dtbo.avbpubkey)
+  $(if $(BOARD_AVB_PVMFW_KEY_PATH),\
+    $(hide) $(AVBTOOL) extract_public_key --key $(BOARD_AVB_PVMFW_KEY_PATH) \
+      --output $(1)/pvmfw.avbpubkey)
   $(if $(BOARD_AVB_RECOVERY_KEY_PATH),\
     $(hide) $(AVBTOOL) extract_public_key --key $(BOARD_AVB_RECOVERY_KEY_PATH) \
       --output $(1)/recovery.avbpubkey)
@@ -3933,6 +3979,7 @@ $(INSTALLED_VBMETAIMAGE_TARGET): \
 	    $(INSTALLED_SYSTEM_EXTIMAGE_TARGET) \
 	    $(INSTALLED_ODMIMAGE_TARGET) \
 	    $(INSTALLED_DTBOIMAGE_TARGET) \
+	    $(INSTALLED_PVMFWIMAGE_TARGET) \
 	    $(INSTALLED_CUSTOMIMAGES_TARGET) \
 	    $(INSTALLED_RECOVERYIMAGE_TARGET) \
 	    $(INSTALLED_VBMETA_SYSTEMIMAGE_TARGET) \
@@ -4559,6 +4606,18 @@ ifdef BOARD_AVB_DTBO_KEY_PATH
 endif # BOARD_AVB_DTBO_KEY_PATH
 endif # BOARD_AVB_ENABLE
 endif # BOARD_PREBUILT_DTBOIMAGE
+ifdef BOARD_PREBUILT_PVMFWIMAGE
+	$(hide) echo "has_pvmfw=true" >> $@
+ifeq ($(BOARD_AVB_ENABLE),true)
+	$(hide) echo "pvmfw_size=$(BOARD_PVMFWIMG_PARTITION_SIZE)" >> $@
+	$(hide) echo "avb_pvmfw_add_hash_footer_args=$(BOARD_AVB_PVMFW_ADD_HASH_FOOTER_ARGS)" >> $@
+ifdef BOARD_AVB_PVMFW_KEY_PATH
+	$(hide) echo "avb_pvmfw_key_path=$(BOARD_AVB_PVMFW_KEY_PATH)" >> $@
+	$(hide) echo "avb_pvmfw_algorithm=$(BOARD_AVB_PVMFW_ALGORITHM)" >> $@
+	$(hide) echo "avb_pvmfw_rollback_index_location=$(BOARD_AVB_PVMFW_ROLLBACK_INDEX_LOCATION)" >> $@
+endif # BOARD_AVB_PVMFW_KEY_PATH
+endif # BOARD_AVB_ENABLE
+endif # BOARD_PREBUILT_PVMFWIMAGE
 	$(call dump-dynamic-partitions-info,$@)
 	@# VINTF checks
 ifeq ($(PRODUCT_ENFORCE_VINTF_MANIFEST),true)
@@ -4824,6 +4883,7 @@ $(BUILT_TARGET_FILES_PACKAGE): \
 	    $(INSTALLED_RECOVERYIMAGE_TARGET) \
 	    $(INSTALLED_CACHEIMAGE_TARGET) \
 	    $(INSTALLED_DTBOIMAGE_TARGET) \
+	    $(INSTALLED_PVMFWIMAGE_TARGET) \
 	    $(INSTALLED_CUSTOMIMAGES_TARGET) \
 	    $(INSTALLED_ANDROID_INFO_TXT_TARGET) \
 	    $(INSTALLED_KERNEL_TARGET) \
@@ -5119,6 +5179,14 @@ ifdef BOARD_PREBUILT_DTBOIMAGE
 	$(hide) mkdir -p $(zip_root)/PREBUILT_IMAGES
 	$(hide) cp $(INSTALLED_DTBOIMAGE_TARGET) $(zip_root)/PREBUILT_IMAGES/
 endif # BOARD_PREBUILT_DTBOIMAGE
+ifdef BOARD_PREBUILT_PVMFWIMAGE
+	$(hide) mkdir -p $(zip_root)/PREBUILT_IMAGES
+	$(hide) cp $(INSTALLED_PVMFWIMAGE_TARGET) $(zip_root)/PREBUILT_IMAGES/
+endif # BOARD_PREBUILT_PVMFWIMAGE
+ifdef BOARD_PREBUILT_BOOTLOADER
+	$(hide) mkdir -p $(zip_root)/IMAGES
+	$(hide) cp $(INSTALLED_BOOTLOADER_MODULE) $(zip_root)/IMAGES/
+endif
 ifneq ($(strip $(BOARD_CUSTOMIMAGES_PARTITION_LIST)),)
 	$(hide) mkdir -p $(zip_root)/PREBUILT_IMAGES
 	$(hide) $(foreach partition,$(BOARD_CUSTOMIMAGES_PARTITION_LIST), \
