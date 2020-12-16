@@ -279,6 +279,23 @@ PRODUCT_PACKAGES += \
     system_manifest.xml \
     system_compatibility_matrix.xml \
 
+# HWASAN runtime for SANITIZE_TARGET=hwaddress builds
+ifneq (,$(filter hwaddress,$(SANITIZE_TARGET)))
+  PRODUCT_PACKAGES += \
+   libclang_rt.hwasan-aarch64-android.bootstrap
+endif
+
+# Jacoco agent JARS to be built and installed, if any.
+ifeq ($(EMMA_INSTRUMENT),true)
+  ifneq ($(EMMA_INSTRUMENT_STATIC),true)
+    # For instrumented build, if Jacoco is not being included statically
+    # in instrumented packages then include Jacoco classes into the
+    # bootclasspath.
+    PRODUCT_PACKAGES += jacocoagent
+    PRODUCT_BOOT_JARS += jacocoagent
+  endif # EMMA_INSTRUMENT_STATIC
+endif # EMMA_INSTRUMENT
+
 # Host tools to install
 PRODUCT_HOST_PACKAGES += \
     BugReport \
