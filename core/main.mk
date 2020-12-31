@@ -253,7 +253,84 @@ ADDITIONAL_SYSTEM_PROPERTIES += $(foreach s,$(SANITIZE_TARGET),ro.sanitize.$(s)=
 #
 # It then uses ${ro.postinstall.fstab.prefix}/etc/fstab.postinstall to
 # mount system_other partition.
-ADDITIONAL_BUILD_PROPERTIES += ro.postinstall.fstab.prefix=/system
+ADDITIONAL_SYSTEM_PROPERTIES += ro.postinstall.fstab.prefix=/system
+
+# -----------------------------------------------------------------
+# ADDITIONAL_VENDOR_PROPERTIES will be installed in vendor/build.prop if
+# property_overrides_split_enabled is true. Otherwise it will be installed in
+# /system/build.prop
+ifdef BOARD_VNDK_VERSION
+  ifeq ($(BOARD_VNDK_VERSION),current)
+    ADDITIONAL_VENDOR_PROPERTIES := ro.vndk.version=$(PLATFORM_VNDK_VERSION)
+  else
+    ADDITIONAL_VENDOR_PROPERTIES := ro.vndk.version=$(BOARD_VNDK_VERSION)
+  endif
+endif
+
+# Add cpu properties for bionic and ART.
+ADDITIONAL_VENDOR_PROPERTIES += ro.bionic.arch=$(TARGET_ARCH)
+ADDITIONAL_VENDOR_PROPERTIES += ro.bionic.cpu_variant=$(TARGET_CPU_VARIANT_RUNTIME)
+ADDITIONAL_VENDOR_PROPERTIES += ro.bionic.2nd_arch=$(TARGET_2ND_ARCH)
+ADDITIONAL_VENDOR_PROPERTIES += ro.bionic.2nd_cpu_variant=$(TARGET_2ND_CPU_VARIANT_RUNTIME)
+
+ADDITIONAL_VENDOR_PROPERTIES += persist.sys.dalvik.vm.lib.2=libart.so
+ADDITIONAL_VENDOR_PROPERTIES += dalvik.vm.isa.$(TARGET_ARCH).variant=$(DEX2OAT_TARGET_CPU_VARIANT_RUNTIME)
+ifneq ($(DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES),)
+  ADDITIONAL_VENDOR_PROPERTIES += dalvik.vm.isa.$(TARGET_ARCH).features=$(DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES)
+endif
+
+ifdef TARGET_2ND_ARCH
+  ADDITIONAL_VENDOR_PROPERTIES += dalvik.vm.isa.$(TARGET_2ND_ARCH).variant=$($(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_CPU_VARIANT_RUNTIME)
+  ifneq ($($(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES),)
+    ADDITIONAL_VENDOR_PROPERTIES += dalvik.vm.isa.$(TARGET_2ND_ARCH).features=$($(TARGET_2ND_ARCH_VAR_PREFIX)DEX2OAT_TARGET_INSTRUCTION_SET_FEATURES)
+  endif
+endif
+
+# Although these variables are prefixed with TARGET_RECOVERY_, they are also needed under charger
+# mode (via libminui).
+ifdef TARGET_RECOVERY_DEFAULT_ROTATION
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.minui.default_rotation=$(TARGET_RECOVERY_DEFAULT_ROTATION)
+endif
+ifdef TARGET_RECOVERY_OVERSCAN_PERCENT
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.minui.overscan_percent=$(TARGET_RECOVERY_OVERSCAN_PERCENT)
+endif
+ifdef TARGET_RECOVERY_PIXEL_FORMAT
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.minui.pixel_format=$(TARGET_RECOVERY_PIXEL_FORMAT)
+endif
+
+ifdef PRODUCT_USE_DYNAMIC_PARTITIONS
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.boot.dynamic_partitions=$(PRODUCT_USE_DYNAMIC_PARTITIONS)
+endif
+
+ifdef PRODUCT_RETROFIT_DYNAMIC_PARTITIONS
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.boot.dynamic_partitions_retrofit=$(PRODUCT_RETROFIT_DYNAMIC_PARTITIONS)
+endif
+
+ifdef PRODUCT_SHIPPING_API_LEVEL
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.product.first_api_level=$(PRODUCT_SHIPPING_API_LEVEL)
+endif
+
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.vendor.build.security_patch=$(VENDOR_SECURITY_PATCH) \
+    ro.product.board=$(TARGET_BOOTLOADER_BOARD_NAME) \
+    ro.board.platform=$(TARGET_BOARD_PLATFORM) \
+    ro.hwui.use_vulkan=$(TARGET_USES_VULKAN)
+
+ifdef TARGET_SCREEN_DENSITY
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.sf.lcd_density=$(TARGET_SCREEN_DENSITY)
+endif
+
+ifdef AB_OTA_UPDATER
+ADDITIONAL_VENDOR_PROPERTIES += \
+    ro.build.ab_update=$(AB_OTA_UPDATER)
+endif
 
 # Set ro.product.vndk.version to know the VNDK version required by product
 # modules. It uses the version in PRODUCT_PRODUCT_VNDK_VERSION. If the value
