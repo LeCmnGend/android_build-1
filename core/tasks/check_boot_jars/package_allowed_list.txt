@@ -269,6 +269,10 @@ org\.codeaurora\.internal.*
 org\.ifaa\.android\.manager.*
 
 ###################################################
+# LiveDisplay
+vendor.lineage.livedisplay.*
+
+###################################################
 # Nvidia services
 com\.nvidia\.*
 com\.nvidia\.profilemanager\.*
