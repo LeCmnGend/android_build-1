@@ -386,6 +386,25 @@ endif
 
 $(KATI_obsolete_var OVERRIDE_PRODUCT_ENFORCE_PRODUCT_PARTITION_INTERFACE,Use PRODUCT_ENFORCE_PRODUCT_PARTITION_INTERFACE instead)
 
+# If build command defines PRODUCT_USE_PRODUCT_VNDK_OVERRIDE as `false`,
+# PRODUCT_PRODUCT_VNDK_VERSION will not be defined automatically.
+# PRODUCT_USE_PRODUCT_VNDK_OVERRIDE can be used for testing only.
+PRODUCT_USE_PRODUCT_VNDK := false
+ifneq ($(PRODUCT_USE_PRODUCT_VNDK_OVERRIDE),)
+  PRODUCT_USE_PRODUCT_VNDK := $(PRODUCT_USE_PRODUCT_VNDK_OVERRIDE)
+else ifeq ($(PRODUCT_SHIPPING_API_LEVEL),)
+  # No shipping level defined
+else ifeq ($(call math_gt,$(PRODUCT_SHIPPING_API_LEVEL),29),true)
+  # Enforce product interface for VNDK if PRODUCT_SHIPPING_API_LEVEL is greater
+  # than 29.
+  PRODUCT_USE_PRODUCT_VNDK := true
+endif
+
+ifdef PRODUCT_ENFORCE_RRO_EXEMPTED_TARGETS
+    $(error PRODUCT_ENFORCE_RRO_EXEMPTED_TARGETS is deprecated, consider using RRO for \
+      $(PRODUCT_ENFORCE_RRO_EXEMPTED_TARGETS))
+endif
+
 define product-overrides-config
 $$(foreach rule,$$(PRODUCT_$(1)_OVERRIDES),\
     $$(if $$(filter 2,$$(words $$(subst :,$$(space),$$(rule)))),,\
