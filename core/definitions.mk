@@ -2759,7 +2759,8 @@ $(hide) $(R8_COMPAT_PROGUARD) $(DEX_FLAGS) \
     $(R8_DEBUG_MODE) \
     $(PRIVATE_PROGUARD_FLAGS) \
     $(addprefix -injars , $(PRIVATE_EXTRA_INPUT_JAR)) \
-    $(PRIVATE_DX_FLAGS)
+    $(PRIVATE_DX_FLAGS) \
+    -ignorewarnings
 $(hide) touch $(PRIVATE_PROGUARD_DICTIONARY)
 endef
 
