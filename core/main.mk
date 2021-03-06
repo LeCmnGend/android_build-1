@@ -1320,8 +1320,10 @@ ifdef FULL_BUILD
         $(if $(call get-32-bit-modules,$(m)),,$(m)))
       $(call maybe-print-list-and-error,$(filter-out $(_allow_list),$(_nonexistent_modules)),\
         $(INTERNAL_PRODUCT) includes non-existent modules in PRODUCT_PACKAGES)
-      $(call maybe-print-list-and-error,$(filter-out $(_nonexistent_modules),$(_allow_list)),\
-        $(INTERNAL_PRODUCT) includes redundant allow list entries for non-existent PRODUCT_PACKAGES)
+      # TODO(b/182105280): Consider re-enabling this check when the ART modules
+      # have been cleaned up from the allowed_list in target/product/generic.mk.
+      #$(call maybe-print-list-and-error,$(filter-out $(_nonexistent_modules),$(_allow_list)),\
+      #  $(INTERNAL_PRODUCT) includes redundant allow list entries for non-existent PRODUCT_PACKAGES)
     endif
 
     # Check to ensure that all modules in PRODUCT_HOST_PACKAGES exist
