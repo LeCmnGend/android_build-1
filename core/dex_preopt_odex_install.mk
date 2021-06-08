@@ -113,6 +113,7 @@ my_dexpreopt_images :=
 my_dexpreopt_images_deps :=
 my_dexpreopt_image_locations :=
 my_dexpreopt_infix := boot
+my_create_dexpreopt_config :=
 ifeq (true, $(DEXPREOPT_USE_ART_IMAGE))
   my_dexpreopt_infix := art
 endif
@@ -128,7 +129,16 @@ ifdef LOCAL_DEX_PREOPT
       LOCAL_UNCOMPRESS_DEX := true
     endif
   endif
+  my_create_dexpreopt_config := true
+endif
 
+# dexpreopt is disabled when TARGET_BUILD_UNBUNDLED_IMAGE is true,
+# but dexpreopt config files are required to dexpreopt in post-processing.
+ifeq ($(TARGET_BUILD_UNBUNDLED_IMAGE),true)
+  my_create_dexpreopt_config := true
+endif
+
+ifeq ($(my_create_dexpreopt_config), true)
   ifeq ($(LOCAL_MODULE_CLASS),JAVA_LIBRARIES)
     my_module_multilib := $(LOCAL_MULTILIB)
     # If the module is not an SDK library and it's a system server jar, only preopt the primary arch.
@@ -248,8 +258,8 @@ ifdef LOCAL_DEX_PREOPT
   $(call json_end)
 
   my_dexpreopt_config := $(intermediates)/dexpreopt.config
-  my_dexpreopt_script := $(intermediates)/dexpreopt.sh
-  my_dexpreopt_zip := $(intermediates)/dexpreopt.zip
+  my_dexpreopt_config_for_postprocessing := $(PRODUCT_OUT)/dexpreopt_config/$(LOCAL_MODULE)_dexpreopt.config
+  my_dexpreopt_config_merger := $(BUILD_SYSTEM)/dex_preopt_config_merger.py
 
   $(my_dexpreopt_config): PRIVATE_MODULE := $(LOCAL_MODULE)
   $(my_dexpreopt_config): PRIVATE_CONTENTS := $(json_contents)
@@ -257,6 +267,13 @@ ifdef LOCAL_DEX_PREOPT
 	@echo "$(PRIVATE_MODULE) dexpreopt.config"
 	echo -e -n '$(subst $(newline),\n,$(subst ','\'',$(subst \,\\,$(PRIVATE_CONTENTS))))' > $@
 
+$(eval $(call copy-one-file,$(my_dexpreopt_config),$(my_dexpreopt_config_for_postprocessing)))
+
+$(LOCAL_INSTALLED_MODULE): $(my_dexpreopt_config_for_postprocessing)
+
+ifdef LOCAL_DEX_PREOPT
+  my_dexpreopt_script := $(intermediates)/dexpreopt.sh
+  my_dexpreopt_zip := $(intermediates)/dexpreopt.zip
   .KATI_RESTAT: $(my_dexpreopt_script)
   $(my_dexpreopt_script): PRIVATE_MODULE := $(LOCAL_MODULE)
   $(my_dexpreopt_script): PRIVATE_GLOBAL_SOONG_CONFIG := $(DEX_PREOPT_SOONG_CONFIG_FOR_MAKE)
@@ -311,3 +328,4 @@ ifdef LOCAL_DEX_PREOPT
   my_dexpreopt_script :=
   my_dexpreopt_zip :=
 endif # LOCAL_DEX_PREOPT
+endif # my_create_dexpreopt_config

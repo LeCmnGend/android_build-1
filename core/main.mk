@@ -1724,6 +1724,9 @@ $(eval $(call combine-notice-files, html, \
 
 else ifeq (,$(TARGET_BUILD_UNBUNDLED))
   $(call dist-for-goals, droidcore, \
+    $(BUILT_OTATOOLS_PACKAGE) \
+    $(APPCOMPAT_ZIP) \
+    $(DEXPREOPT_TOOLS_ZIP) \
     $(INTERNAL_UPDATE_PACKAGE_TARGET) \
     $(INTERNAL_OTA_PACKAGE_TARGET) \
     $(INTERNAL_OTA_METADATA) \
@@ -1759,7 +1762,8 @@ else ifeq (,$(TARGET_BUILD_UNBUNDLED))
     $(INSTALLED_ANDROID_INFO_TXT_TARGET) \
     $(INSTALLED_MISC_INFO_TARGET) \
     $(INSTALLED_RAMDISK_TARGET) \
-   )
+    $(DEXPREOPT_CONFIG_ZIP) \
+  )
 
   # Put a copy of the radio/bootloader files in the dist dir.
   $(foreach f,$(INSTALLED_RADIOIMAGE_TARGET), \

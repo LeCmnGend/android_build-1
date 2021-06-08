@@ -5470,6 +5470,48 @@ $(APPCOMPAT_ZIP): $(SOONG_ZIP)
 	$(hide) find $(PRODUCT_OUT)/appcompat | sort >$(PRIVATE_LIST_FILE)
 	$(hide) $(SOONG_ZIP) -d -o $@ -C $(PRODUCT_OUT)/appcompat -l $(PRIVATE_LIST_FILE)
 
+# The mac build doesn't build dex2oat, so create the zip file only if the build OS is linux.
+ifeq ($(BUILD_OS),linux)
+ifneq ($(DEX2OAT),)
+dexpreopt_tools_deps := $(DEXPREOPT_GEN_DEPS) $(DEXPREOPT_GEN) $(AAPT2)
+DEXPREOPT_TOOLS_ZIP := $(PRODUCT_OUT)/dexpreopt_tools.zip
+$(DEXPREOPT_TOOLS_ZIP): $(dexpreopt_tools_deps)
+$(DEXPREOPT_TOOLS_ZIP): PRIVATE_DEXPREOPT_TOOLS_DEPS := $(dexpreopt_tools_deps)
+$(DEXPREOPT_TOOLS_ZIP): $(SOONG_ZIP)
+	$(hide) mkdir -p $(dir $@)
+	$(hide) $(SOONG_ZIP) -d -o $@ -j $(addprefix -f ,$(PRIVATE_DEXPREOPT_TOOLS_DEPS)) -f $$(realpath $(DEX2OAT))
+endif # DEX2OAT is set
+endif # BUILD_OS == linux
+
+DEXPREOPT_CONFIG_ZIP := $(PRODUCT_OUT)/dexpreopt_config.zip
+
+$(DEXPREOPT_CONFIG_ZIP): $(INSTALLED_SYSTEMIMAGE_TARGET) \
+    $(INSTALLED_VENDORIMAGE_TARGET) \
+    $(INSTALLED_ODMIMAGE_TARGET) \
+    $(INSTALLED_PRODUCTIMAGE_TARGET) \
+
+ifeq (,$(TARGET_BUILD_UNBUNDLED))
+$(DEXPREOPT_CONFIG_ZIP): $(DEX_PREOPT_CONFIG_FOR_MAKE) \
+	  $(DEX_PREOPT_SOONG_CONFIG_FOR_MAKE) \
+
+endif
+
+$(DEXPREOPT_CONFIG_ZIP): $(SOONG_ZIP)
+	$(hide) mkdir -p $(dir $@) $(PRODUCT_OUT)/dexpreopt_config
+
+ifeq (,$(TARGET_BUILD_UNBUNDLED))
+ifneq (,$(DEX_PREOPT_CONFIG_FOR_MAKE))
+	$(hide) cp $(DEX_PREOPT_CONFIG_FOR_MAKE) $(PRODUCT_OUT)/dexpreopt_config
+endif
+ifneq (,$(DEX_PREOPT_SOONG_CONFIG_FOR_MAKE))
+	$(hide) cp $(DEX_PREOPT_SOONG_CONFIG_FOR_MAKE) $(PRODUCT_OUT)/dexpreopt_config
+endif
+endif #!TARGET_BUILD_UNBUNDLED
+	$(hide) $(SOONG_ZIP) -d -o $@ -C $(PRODUCT_OUT)/dexpreopt_config -D $(PRODUCT_OUT)/dexpreopt_config
+
+.PHONY: dexpreopt_config_zip
+dexpreopt_config_zip: $(DEXPREOPT_CONFIG_ZIP)
+
 # -----------------------------------------------------------------
 # A zip of the symbols directory.  Keep the full paths to make it
 # more obvious where these files came from.
