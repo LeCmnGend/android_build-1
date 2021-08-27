@@ -1939,6 +1939,8 @@ def GenerateAbOtaPackage(target_file, output_file, source_file=None):
   elif OPTIONS.skip_postinstall:
     target_file = GetTargetFilesZipWithoutPostinstallConfig(target_file)
 
+  CheckVintfIfTrebleEnabled(target_file, target_info)
+
   # Generate payload.
   payload = Payload()
 
@@ -1991,8 +1993,6 @@ def GenerateAbOtaPackage(target_file, output_file, source_file=None):
       logger.warning("Cannot find care map file in target_file package")
 
   common.ZipClose(target_zip)
-
-  CheckVintfIfTrebleEnabled(target_file, target_info)
 
   # We haven't written the metadata entry yet, which will be handled in
   # FinalizeMetadata().
