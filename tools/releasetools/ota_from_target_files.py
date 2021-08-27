@@ -2192,6 +2192,8 @@ def WriteABOTAPackageWithBrilloScript(target_file, output_file,
   elif OPTIONS.skip_postinstall:
     target_file = GetTargetFilesZipWithoutPostinstallConfig(target_file)
 
+  CheckVintfIfTrebleEnabled(target_file, target_info)
+
   # Generate payload.
   payload = Payload()
 
