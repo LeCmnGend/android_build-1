@@ -386,6 +386,8 @@ _product_single_value_vars += PRODUCT_BUILD_DEBUG_BOOT_IMAGE
 _product_single_value_vars += PRODUCT_BUILD_VENDOR_BOOT_IMAGE
 _product_single_value_vars += PRODUCT_BUILD_DEBUG_VENDOR_BOOT_IMAGE
 _product_single_value_vars += PRODUCT_BUILD_VBMETA_IMAGE
+_product_single_value_vars += PRODUCT_BUILD_SUPER_EMPTY_IMAGE
+_product_single_value_vars += PRODUCT_BUILD_PVMFW_IMAGE
 
 # List of boot jars delivered via apex
 _product_list_vars += PRODUCT_UPDATABLE_BOOT_JARS
