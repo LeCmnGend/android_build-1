@@ -673,6 +673,9 @@ define check_vndk_version
 endef
 
 ifdef BOARD_VNDK_VERSION
+  ifeq ($(BOARD_VNDK_VERSION),$(PLATFORM_VNDK_VERSION))
+    $(error BOARD_VNDK_VERSION is equal to PLATFORM_VNDK_VERSION; use BOARD_VNDK_VERSION := current)
+  endif
   ifneq ($(BOARD_VNDK_VERSION),current)
     $(call check_vndk_version,$(BOARD_VNDK_VERSION))
   endif
@@ -728,9 +731,9 @@ $(foreach m,$(filter-out BUILD_COPY_HEADERS,$(DEFAULT_WARNING_BUILD_MODULE_TYPES
     $(KATI_obsolete_var $(m),Please convert to Soong),\
     $(KATI_deprecated_var $(m),Please convert to Soong)))
 
-$(if $(filter false,$(BUILD_BROKEN_USES_BUILD_COPY_HEADERS)),\
-  $(KATI_obsolete_var BUILD_COPY_HEADERS,See $(CHANGES_URL)#copy_headers),\
-  $(KATI_deprecated_var BUILD_COPY_HEADERS,See $(CHANGES_URL)#copy_headers))
+$(if $(filter true,$(BUILD_BROKEN_USES_BUILD_COPY_HEADERS)),\
+  $(KATI_deprecated_var BUILD_COPY_HEADERS,See $(CHANGES_URL)\#copy_headers),\
+  $(KATI_obsolete_var BUILD_COPY_HEADERS,See $(CHANGES_URL)\#copy_headers))
 
 $(foreach m,$(DEFAULT_ERROR_BUILD_MODULE_TYPES),\
   $(if $(filter true,$(BUILD_BROKEN_USES_$(m))),\
