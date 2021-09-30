@@ -124,15 +124,6 @@ ifneq ($(COVERAGE_EXCLUDE_PATHS),)
   $(warning Variable COVERAGE_EXCLUDE_PATHS is deprecated. Please use NATIVE_COVERAGE_EXCLUDE_PATHS instead.)
 endif
 
-ifeq (true,$(EMMA_INSTRUMENT))
-# Adding the jacoco library can cause the inclusion of
-# some typically banned classes
-# So if the user didn't specify SKIP_BOOT_JARS_CHECK, enable it here
-ifndef SKIP_BOOT_JARS_CHECK
-SKIP_BOOT_JARS_CHECK := true
-endif
-endif
-
 #
 # -----------------------------------------------------------------
 # Validate ADDITIONAL_DEFAULT_PROPERTIES.
