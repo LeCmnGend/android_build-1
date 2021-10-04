@@ -21,8 +21,8 @@ include_test_suite_notice := true
 include $(BUILD_SYSTEM)/tasks/tools/compatibility.mk
 
 .PHONY: cts
-cts: $(compatibility_zip)
-$(call dist-for-goals, cts, $(compatibility_zip))
+cts: $(compatibility_zip) $(compatibility_tests_list_zip)
+$(call dist-for-goals, cts, $(compatibility_zip) $(compatibility_tests_list_zip))
 
 .PHONY: cts_v2
 cts_v2: cts
