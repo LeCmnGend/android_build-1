@@ -748,6 +748,27 @@ $(call add-clean-step, rm -rf $(HOST_OUT)/framework/vts10-tradefed.jar)
 $(call add-clean-step, rm -rf $(HOST_OUT)/vts/*)
 $(call add-clean-step, rm -rf $(HOST_OUT)/framework/vts-tradefed.jar)
 
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/default.prop)
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/system/etc/prop.default)
+
+# Workaround for Soong not being able to rebuild the host binary if its
+# JNI dependencies change: b/170389375
+$(call add-clean-step, rm -rf $(OUT_DIR)/soong/host/*/lib*/libconscrypt_openjdk_jni.so)
+# vendor-ramdisk renamed to vendor_ramdisk
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor-ramdisk)
+
+# Common R directory has been removed.
+$(call add-clean-step, rm -rf $(OUT_DIR)/target/common/R)
+
+# Most of SOONG_HOST_OUT_EXECUTABLES has been moved to HOST_OUT_EXECUTABLES
+$(call add-clean-step, rm -rf $(SOONG_HOST_OUT))
+
+# More of SOONG_HOST_OUT_EXECUTABLES has been moved to HOST_OUT_EXECUTABLES
+$(call add-clean-step, rm -rf $(SOONG_HOST_OUT))
+
+# More of SOONG_HOST_OUT_EXECUTABLES has been moved to HOST_OUT_EXECUTABLES
+$(call add-clean-step, rm -rf $(SOONG_HOST_OUT))
+
 # ************************************************
 # NEWER CLEAN STEPS MUST BE AT THE END OF THE LIST
 # ************************************************
