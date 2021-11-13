@@ -2243,7 +2243,12 @@ $(recovery_ramdisk): $(MKBOOTFS) $(COMPRESSION_COMMAND_DEPS) \
 	  cp -f $(recovery_wipe) $(TARGET_RECOVERY_ROOT_OUT)/system/etc/recovery.wipe)
 	ln -sf prop.default $(TARGET_RECOVERY_ROOT_OUT)/default.prop
 	$(BOARD_RECOVERY_IMAGE_PREPARE)
-	$(MKBOOTFS) -d $(TARGET_OUT) $(TARGET_RECOVERY_ROOT_OUT) | $(COMPRESSION_COMMAND) > $(recovery_ramdisk)
+	@echo ----- Making uncompressed recovery ramdisk ------
+	$(MKBOOTFS) -d $(TARGET_OUT) $(TARGET_RECOVERY_ROOT_OUT) > $@
+
+$(recovery_ramdisk): $(recovery_uncompressed_ramdisk) $(COMPRESSION_COMMAND_DEPS)
+	@echo ----- Making compressed recovery ramdisk ------
+	$(COMPRESSION_COMMAND) < $(recovery_uncompressed_ramdisk) > $@
 
 # $(1): output file
 # $(2): kernel file
