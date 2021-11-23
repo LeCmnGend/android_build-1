@@ -36,10 +36,10 @@ define generate-common-build-props
     echo "# These properties identify this partition image." >> $(2);\
     echo "####################################" >> $(2);\
     echo "ro.product.$(1).brand=$(PRODUCT_BRAND)" >> $(2);\
-    echo "ro.product.$(1).device=$(TARGET_DEVICE)" >> $(2);\
+    echo "ro.product.$(1).device=$${DeviceName:-$(TARGET_DEVICE)}" >> $(2);\
     echo "ro.product.$(1).manufacturer=$(PRODUCT_MANUFACTURER)" >> $(2);\
-    echo "ro.product.$(1).model=$(PRODUCT_MODEL)" >> $(2);\
-    echo "ro.product.$(1).name=$(TARGET_PRODUCT)" >> $(2);\
+    echo "ro.product.$(1).model=$${ProductModel:-$(PRODUCT_MODEL)}" >> $(2);\
+    echo "ro.product.$(1).name=$${DeviceProduct:-$(TARGET_PRODUCT)}" >> $(2);\
     if [ -n "$(strip $(PRODUCT_MODEL_FOR_ATTESTATION))" ]; then \
         echo "ro.product.model_for_attestation=$(PRODUCT_MODEL_FOR_ATTESTATION)" >> $(2);\
     fi; \
@@ -70,10 +70,7 @@ define generate-common-build-props
     )\
     echo "ro.$(1).build.date=`$(DATE_FROM_FILE)`" >> $(2);\
     echo "ro.$(1).build.date.utc=`$(DATE_FROM_FILE) +%s`" >> $(2);\
-    # Allow optional assignments for ARC forward-declarations (b/249168657)
-    # TODO: Remove any tag-related inconsistencies once the goals from
-    # go/arc-android-sigprop-changes have been achieved.
-    echo "ro.$(1).build.fingerprint?=$(BUILD_FINGERPRINT_FROM_FILE)" >> $(2);\
+    echo "ro.$(1).build.fingerprint?=$${BuildFingerprint:-$(BUILD_FINGERPRINT_FROM_FILE)}" >> $(2);\
     echo "ro.$(1).build.id?=$(BUILD_ID)" >> $(2);\
     echo "ro.$(1).build.tags?=$(BUILD_VERSION_TAGS)" >> $(2);\
     echo "ro.$(1).build.type=$(TARGET_BUILD_VARIANT)" >> $(2);\
