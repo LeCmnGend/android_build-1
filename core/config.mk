@@ -790,6 +790,23 @@ endif
 sepolicy_major_vers :=
 sepolicy_minor_vers :=
 
+# BOARD_SEPOLICY_VERS must take the format "NN.m" and contain the sepolicy
+# version identifier corresponding to the sepolicy on which the non-platform
+# policy is to be based. If unspecified, this will build against the current
+# public platform policy in tree
+ifndef BOARD_SEPOLICY_VERS
+# The default platform policy version.
+BOARD_SEPOLICY_VERS := $(PLATFORM_SEPOLICY_VERSION)
+endif
+
+ifeq ($(BOARD_SEPOLICY_VERS),$(PLATFORM_SEPOLICY_VERSION))
+IS_TARGET_MIXED_SEPOLICY :=
+else
+IS_TARGET_MIXED_SEPOLICY := true
+endif
+
+.KATI_READONLY := IS_TARGET_MIXED_SEPOLICY
+
 # A list of SEPolicy versions, besides PLATFORM_SEPOLICY_VERSION, that the framework supports.
 PLATFORM_SEPOLICY_COMPAT_VERSIONS := \
     26.0 \
