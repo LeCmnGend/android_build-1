@@ -1691,7 +1691,7 @@ if [ -z ${CCACHE_EXEC} ]; then
     if [ ! -z "$ccache_path" ]; then
 	export USE_CCACHE=1
         export CCACHE_EXEC="$ccache_path"
-        $ccache_path -o compression=true
+        $ccache_path -o compression=false
 	echo -e "\e[1mccache enabled and \e[32m\e[4mCCACHE_EXEC\e[0m \e[1mhas been set to : \e[4m$ccache_path\e[0m"
     else
         echo -e "\e[31m\e[1mccache not found/installed!\e[0m"
