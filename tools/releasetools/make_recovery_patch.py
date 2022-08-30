@@ -47,23 +47,8 @@ def main(argv):
   if not recovery_img or not boot_img:
     sys.exit(0)
 
-  board_uses_vendorimage = OPTIONS.info_dict.get(
-      "board_uses_vendorimage") == "true"
-  board_builds_vendorimage =  OPTIONS.info_dict.get(
-      "board_builds_vendorimage") == "true"
-  target_files_dir = None
-
-  if board_builds_vendorimage:
-    target_files_dir = "VENDOR"
-  elif not board_uses_vendorimage:
-    target_files_dir = "SYSTEM/vendor"
-
   def output_sink(fn, data):
-    if target_files_dir is None:
-      return
-
-    with open(os.path.join(output_dir, target_files_dir,
-                           *fn.split("/")), "wb") as f:
+    with open(os.path.join(output_dir, "SYSTEM", *fn.split("/")), "wb") as f:
       f.write(data)
 
   common.MakeRecoveryPatch(input_dir, output_sink, recovery_img, boot_img)

@@ -18,8 +18,9 @@ import os
 from hashlib import sha1
 
 import common
-from blockimgdiff import BlockImageDiff, HeapItem, ImgdiffStats, Transfer
-from images import DataImage, EmptyImage, FileImage
+from blockimgdiff import (
+    BlockImageDiff, DataImage, EmptyImage, FileImage, HeapItem, ImgdiffStats,
+    Transfer)
 from rangelib import RangeSet
 from test_utils import ReleaseToolsTestCase
 

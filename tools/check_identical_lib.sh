@@ -5,13 +5,11 @@ STRIP_PATH="${1}"
 CORE="${2}"
 VENDOR="${3}"
 
-TMPDIR="$(mktemp -d ${CORE}.vndk_lib_check.XXXXXXXX)"
-stripped_core="${TMPDIR}/core"
-stripped_vendor="${TMPDIR}/vendor"
+stripped_core="${CORE}.vndk_lib_check.stripped"
+stripped_vendor="${VENDOR}.vndk_lib_check.stripped"
 
 function cleanup() {
-  rm -f "${stripped_core}" "${stripped_vendor}"
-  rmdir "${TMPDIR}"
+  rm -f ${stripped_core} ${stripped_vendor}
 }
 trap cleanup EXIT
 
