@@ -39,17 +39,6 @@ include $(BUILD_SYSTEM)/use_lld_setup.mk
 include $(BUILD_SYSTEM)/binary.mk
 ###################################
 
-ifdef LOCAL_INJECT_BSSL_HASH
-inject_module := $(intermediates)/INJECT_BSSL_HASH/$(notdir $(my_installed_module_stem))
-LOCAL_INTERMEDIATE_TARGETS += $(inject_module)
-$(inject_module): $(SOONG_HOST_OUT)/bin/bssl_inject_hash
-$(inject_module): $(linked_module)
-	@echo "target inject BSSL hash: $(PRIVATE_MODULE) ($@)"
-	$(SOONG_HOST_OUT)/bin/bssl_inject_hash -in-object $< -o $@
-else
-inject_module := $(linked_module)
-endif
-
 ###########################################################
 ## Store a copy with symbols for symbolic debugging
 ###########################################################
@@ -58,7 +47,7 @@ my_unstripped_path := $(TARGET_OUT_UNSTRIPPED)/$(patsubst $(PRODUCT_OUT)/%,%,$(m
 else
 my_unstripped_path := $(LOCAL_UNSTRIPPED_PATH)
 endif
-symbolic_input := $(inject_module)
+symbolic_input := $(linked_module)
 symbolic_output := $(my_unstripped_path)/$(my_installed_module_stem)
 $(symbolic_output) : $(symbolic_input)
 	@echo "target Symbolic: $(PRIVATE_MODULE) ($@)"
@@ -70,7 +59,7 @@ $(symbolic_output) : $(symbolic_input)
 
 ifeq ($(BREAKPAD_GENERATE_SYMBOLS),true)
 my_breakpad_path := $(TARGET_OUT_BREAKPAD)/$(patsubst $(PRODUCT_OUT)/%,%,$(my_module_path))
-breakpad_input := $(inject_module)
+breakpad_input := $(linked_module)
 breakpad_output := $(my_breakpad_path)/$(my_installed_module_stem).sym
 $(breakpad_output) : $(breakpad_input) | $(BREAKPAD_DUMP_SYMS) $(PRIVATE_READELF)
 	@echo "target breakpad: $(PRIVATE_MODULE) ($@)"
@@ -132,8 +121,8 @@ ifneq (,$(my_strip_module))
 	CLANG_BIN=$(LLVM_PREBUILTS_PATH) \
 	CROSS_COMPILE=$(PRIVATE_TOOLS_PREFIX) \
 	XZ=$(XZ) \
-	$(SOONG_STRIP_PATH) -i $< -o $@ -d $@.strip.d $(PRIVATE_STRIP_ARGS)
-  $(call include-depfile,$(strip_output).strip.d,$(strip_output))
+	$(SOONG_STRIP_PATH) -i $< -o $@ -d $@.d $(PRIVATE_STRIP_ARGS)
+  $(call include-depfile,$(strip_output).d)
 else
   # Don't strip the binary, just copy it.  We can't skip this step
   # because a copy of the binary must appear at LOCAL_BUILT_MODULE.
@@ -144,7 +133,6 @@ endif # my_strip_module
 
 $(cleantarget): PRIVATE_CLEAN_FILES += \
     $(linked_module) \
-    $(inject_module) \
     $(breakpad_output) \
     $(symbolic_output) \
     $(strip_output)

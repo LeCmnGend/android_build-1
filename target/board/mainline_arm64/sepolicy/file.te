@@ -1,3 +1,0 @@
-# TODO(b/143732851): remove this file when the mainline system image
-# no longer need these SoC specific directory
-type persist_file, file_type;

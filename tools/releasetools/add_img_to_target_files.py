@@ -60,7 +60,6 @@ import build_super_image
 import common
 import rangelib
 import sparse_img
-import verity_utils
 
 if sys.hexversion < 0x02070000:
   print("Python 2.7 or newer is required.", file=sys.stderr)
@@ -166,12 +165,9 @@ def AddSystem(output_zip, recovery_img=None, boot_img=None):
       else:
         common.ZipWrite(output_zip, output_file, arc_name)
 
-  board_uses_vendorimage = OPTIONS.info_dict.get(
-      "board_uses_vendorimage") == "true"
-
-  if (OPTIONS.rebuild_recovery and not board_uses_vendorimage and
-      recovery_img is not None and boot_img is not None):
-    logger.info("Building new recovery patch on system at system/vendor")
+  if (OPTIONS.rebuild_recovery and recovery_img is not None and
+      boot_img is not None):
+    logger.info("Building new recovery patch")
     common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink, recovery_img,
                              boot_img, info_dict=OPTIONS.info_dict)
 
@@ -194,49 +190,14 @@ def AddSystemOther(output_zip):
   CreateImage(OPTIONS.input_tmp, OPTIONS.info_dict, "system_other", img)
 
 
-def AddVendor(output_zip, recovery_img=None, boot_img=None):
+def AddVendor(output_zip):
   """Turn the contents of VENDOR into a vendor image and store in it
   output_zip."""
 
   img = OutputFile(output_zip, OPTIONS.input_tmp, "IMAGES", "vendor.img")
   if os.path.exists(img.name):
     logger.info("vendor.img already exists; no need to rebuild...")
-
-    # AVB-sign the image as needed.
-    if OPTIONS.info_dict.get("avb_enable") == "true":
-      logger.info("updating avb hash for prebuilt vendor.img...")
-      avbtool = OPTIONS.info_dict["avb_avbtool"]
-      # The AVB hash footer will be replaced if already present.
-      cmd = [avbtool, "add_hashtree_footer", "--image", img.name,
-             "--partition_name", "vendor"]
-      common.AppendAVBSigningArgs(cmd, "vendor")
-      args = OPTIONS.info_dict.get("avb_vendor_add_hash_footer_args")
-      if args and args.strip():
-        cmd.extend(shlex.split(args))
-      common.RunAndCheckOutput(cmd)
-
     return img.name
-
-  def output_sink(fn, data):
-    ofile = open(os.path.join(OPTIONS.input_tmp, "VENDOR", fn), "w")
-    ofile.write(data)
-    ofile.close()
-
-    if output_zip:
-      arc_name = "VENDOR/" + fn
-      if arc_name in output_zip.namelist():
-        OPTIONS.replace_updated_files_list.append(arc_name)
-      else:
-        common.ZipWrite(output_zip, ofile.name, arc_name)
-
-  board_uses_vendorimage = OPTIONS.info_dict.get(
-      "board_uses_vendorimage") == "true"
-
-  if (OPTIONS.rebuild_recovery and board_uses_vendorimage and
-      recovery_img is not None and boot_img is not None):
-    logger.info("Building new recovery patch on vendor")
-    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink, recovery_img,
-                             boot_img, info_dict=OPTIONS.info_dict)
 
   block_list = OutputFile(output_zip, OPTIONS.input_tmp, "IMAGES", "vendor.map")
   CreateImage(OPTIONS.input_tmp, OPTIONS.info_dict, "vendor", img,
@@ -261,20 +222,20 @@ def AddProduct(output_zip):
   return img.name
 
 
-def AddSystemExt(output_zip):
-  """Turn the contents of SYSTEM_EXT into a system_ext image and store it in
-  output_zip."""
+def AddProductServices(output_zip):
+  """Turn the contents of PRODUCT_SERVICES into a product_services image and
+  store it in output_zip."""
 
   img = OutputFile(output_zip, OPTIONS.input_tmp, "IMAGES",
-                   "system_ext.img")
+                   "product_services.img")
   if os.path.exists(img.name):
-    logger.info("system_ext.img already exists; no need to rebuild...")
+    logger.info("product_services.img already exists; no need to rebuild...")
     return img.name
 
   block_list = OutputFile(
-      output_zip, OPTIONS.input_tmp, "IMAGES", "system_ext.map")
+      output_zip, OPTIONS.input_tmp, "IMAGES", "product_services.map")
   CreateImage(
-      OPTIONS.input_tmp, OPTIONS.info_dict, "system_ext", img,
+      OPTIONS.input_tmp, OPTIONS.info_dict, "product_services", img,
       block_list=block_list)
   return img.name
 
@@ -285,20 +246,6 @@ def AddOdm(output_zip):
   img = OutputFile(output_zip, OPTIONS.input_tmp, "IMAGES", "odm.img")
   if os.path.exists(img.name):
     logger.info("odm.img already exists; no need to rebuild...")
-
-    # AVB-sign the image as needed.
-    if OPTIONS.info_dict.get("avb_enable") == "true":
-      logger.info("updating avb hash for prebuilt odm.img...")
-      avbtool = OPTIONS.info_dict["avb_avbtool"]
-      # The AVB hash footer will be replaced if already present.
-      cmd = [avbtool, "add_hashtree_footer", "--image", img.name,
-             "--partition_name", "odm"]
-      common.AppendAVBSigningArgs(cmd, "odm")
-      args = OPTIONS.info_dict.get("avb_odm_add_hash_footer_args")
-      if args and args.strip():
-        cmd.extend(shlex.split(args))
-      common.RunAndCheckOutput(cmd)
-
     return img.name
 
   block_list = OutputFile(
@@ -341,61 +288,16 @@ def AddDtbo(output_zip):
   img.Write()
   return img.name
 
-def AddCustomImages(output_zip, partition_name):
-  """Adds and signs custom images in IMAGES/.
-
-  Args:
-    output_zip: The output zip file (needs to be already open), or None to
-        write images to OPTIONS.input_tmp/.
-
-  Uses the image under IMAGES/ if it already exists. Otherwise looks for the
-  image under PREBUILT_IMAGES/, signs it as needed, and returns the image name.
-
-  Raises:
-    AssertionError: If image can't be found.
-  """
-
-  partition_size = OPTIONS.info_dict.get(
-      "avb_{}_partition_size".format(partition_name))
-  key_path = OPTIONS.info_dict.get("avb_{}_key_path".format(partition_name))
-  algorithm = OPTIONS.info_dict.get("avb_{}_algorithm".format(partition_name))
-  extra_args = OPTIONS.info_dict.get(
-      "avb_{}_add_hashtree_footer_args".format(partition_name))
-  partition_size = OPTIONS.info_dict.get(
-      "avb_{}_partition_size".format(partition_name))
-
-  builder = verity_utils.CreateCustomImageBuilder(
-      OPTIONS.info_dict, partition_name, partition_size,
-      key_path, algorithm, extra_args)
-
-  for img_name in OPTIONS.info_dict.get(
-      "avb_{}_image_list".format(partition_name)).split():
-    custom_image = OutputFile(output_zip, OPTIONS.input_tmp, "IMAGES", img_name)
-    if os.path.exists(custom_image.name):
-      continue
-
-    custom_image_prebuilt_path = os.path.join(
-        OPTIONS.input_tmp, "PREBUILT_IMAGES", img_name)
-    assert os.path.exists(custom_image_prebuilt_path), \
-      "Failed to find %s at %s" % (img_name, custom_image_prebuilt_path)
-
-    shutil.copy(custom_image_prebuilt_path, custom_image.name)
-
-    if builder is not None:
-      builder.Build(custom_image.name)
-
-    custom_image.Write()
-
-  default = os.path.join(OPTIONS.input_tmp, "IMAGES", partition_name + ".img")
-  assert os.path.exists(default), \
-      "There should be one %s.img" % (partition_name)
-  return default
-
 
 def CreateImage(input_dir, info_dict, what, output_file, block_list=None):
   logger.info("creating %s.img...", what)
 
   image_props = build_image.ImagePropFromGlobalDict(info_dict, what)
+  fstab = info_dict["fstab"]
+  mount_point = "/" + what
+  if fstab and mount_point in fstab:
+    image_props["fs_type"] = fstab[mount_point].fs_type
+
   image_props["timestamp"] = FIXED_FILE_TIMESTAMP
 
   if what == "system":
@@ -416,8 +318,13 @@ def CreateImage(input_dir, info_dict, what, output_file, block_list=None):
 
   # Use repeatable ext4 FS UUID and hash_seed UUID (based on partition name and
   # build fingerprint).
-  build_info = common.BuildInfo(info_dict)
-  uuid_seed = what + "-" + build_info.GetPartitionFingerprint(what)
+  uuid_seed = what + "-"
+  if "build.prop" in info_dict:
+    build_prop = info_dict["build.prop"]
+    if "ro.build.fingerprint" in build_prop:
+      uuid_seed += build_prop["ro.build.fingerprint"]
+    elif "ro.build.thumbprint" in build_prop:
+      uuid_seed += build_prop["ro.build.thumbprint"]
   image_props["uuid"] = str(uuid.uuid5(uuid.NAMESPACE_URL, uuid_seed))
   hash_seed = "hash_seed-" + uuid_seed
   image_props["hash_seed"] = str(uuid.uuid5(uuid.NAMESPACE_URL, hash_seed))
@@ -475,10 +382,35 @@ def AddUserdata(output_zip):
   else:
     user_dir = common.MakeTempDir()
 
+  fstab = OPTIONS.info_dict["fstab"]
+  if fstab:
+    image_props["fs_type"] = fstab["/data"].fs_type
   build_image.BuildImage(user_dir, image_props, img.name)
 
   common.CheckSize(img.name, "userdata.img", OPTIONS.info_dict)
   img.Write()
+
+
+def AppendVBMetaArgsForPartition(cmd, partition, image):
+  """Appends the VBMeta arguments for partition.
+
+  It sets up the VBMeta argument by including the partition descriptor from the
+  given 'image', or by configuring the partition as a chained partition.
+
+  Args:
+    cmd: A list of command args that will be used to generate the vbmeta image.
+        The argument for the partition will be appended to the list.
+    partition: The name of the partition (e.g. "system").
+    image: The path to the partition image.
+  """
+  # Check if chain partition is used.
+  key_path = OPTIONS.info_dict.get("avb_" + partition + "_key_path")
+  if key_path:
+    chained_partition_arg = common.GetAvbChainedPartitionArg(
+        partition, OPTIONS.info_dict)
+    cmd.extend(["--chain_partition", chained_partition_arg])
+  else:
+    cmd.extend(["--include_descriptors_from_image", image])
 
 
 def AddVBMeta(output_zip, partitions, name, needed_partitions):
@@ -490,9 +422,8 @@ def AddVBMeta(output_zip, partitions, name, needed_partitions):
   Args:
     output_zip: The output zip file, which needs to be already open.
     partitions: A dict that's keyed by partition names with image paths as
-        values. Only valid partition names are accepted, as partitions listed
-        in common.AVB_PARTITIONS and custom partitions listed in
-        OPTIONS.info_dict.get("avb_custom_images_partition_list")
+        values. Only valid partition names are accepted, as listed in
+        common.AVB_PARTITIONS.
     name: Name of the VBMeta partition, e.g. 'vbmeta', 'vbmeta_system'.
     needed_partitions: Partitions whose descriptors should be included into the
         generated VBMeta image.
@@ -511,7 +442,45 @@ def AddVBMeta(output_zip, partitions, name, needed_partitions):
     logger.info("%s.img already exists; not rebuilding...", name)
     return img.name
 
-  common.BuildVBMeta(img.name, partitions, name, needed_partitions)
+  avbtool = OPTIONS.info_dict["avb_avbtool"]
+  cmd = [avbtool, "make_vbmeta_image", "--output", img.name]
+  common.AppendAVBSigningArgs(cmd, name)
+
+  for partition, path in partitions.items():
+    if partition not in needed_partitions:
+      continue
+    assert (partition in common.AVB_PARTITIONS or
+            partition.startswith('vbmeta_')), \
+        'Unknown partition: {}'.format(partition)
+    assert os.path.exists(path), \
+        'Failed to find {} for {}'.format(path, partition)
+    AppendVBMetaArgsForPartition(cmd, partition, path)
+
+  args = OPTIONS.info_dict.get("avb_{}_args".format(name))
+  if args and args.strip():
+    split_args = shlex.split(args)
+    for index, arg in enumerate(split_args[:-1]):
+      # Sanity check that the image file exists. Some images might be defined
+      # as a path relative to source tree, which may not be available at the
+      # same location when running this script (we have the input target_files
+      # zip only). For such cases, we additionally scan other locations (e.g.
+      # IMAGES/, RADIO/, etc) before bailing out.
+      if arg == '--include_descriptors_from_image':
+        image_path = split_args[index + 1]
+        if os.path.exists(image_path):
+          continue
+        found = False
+        for dir_name in ['IMAGES', 'RADIO', 'PREBUILT_IMAGES']:
+          alt_path = os.path.join(
+              OPTIONS.input_tmp, dir_name, os.path.basename(image_path))
+          if os.path.exists(alt_path):
+            split_args[index + 1] = alt_path
+            found = True
+            break
+        assert found, 'Failed to find {}'.format(image_path)
+    cmd.extend(split_args)
+
+  common.RunAndCheckOutput(cmd)
   img.Write()
   return img.name
 
@@ -562,6 +531,10 @@ def AddCache(output_zip):
   image_props["timestamp"] = FIXED_FILE_TIMESTAMP
 
   user_dir = common.MakeTempDir()
+
+  fstab = OPTIONS.info_dict["fstab"]
+  if fstab:
+    image_props["fs_type"] = fstab["/cache"].fs_type
   build_image.BuildImage(user_dir, image_props, img.name)
 
   common.CheckSize(img.name, "cache.img", OPTIONS.info_dict)
@@ -628,19 +601,17 @@ def AddCareMapForAbOta(output_zip, ab_partitions, image_paths):
       care_map_list += care_map
 
       # adds fingerprint field to the care_map
-      # TODO(xunchang) revisit the fingerprint calculation for care_map.
-      partition_props = OPTIONS.info_dict.get(partition + ".build.prop")
+      build_props = OPTIONS.info_dict.get(partition + ".build.prop", {})
       prop_name_list = ["ro.{}.build.fingerprint".format(partition),
                         "ro.{}.build.thumbprint".format(partition)]
 
-      present_props = [x for x in prop_name_list if
-                       partition_props and partition_props.GetProp(x)]
+      present_props = [x for x in prop_name_list if x in build_props]
       if not present_props:
         logger.warning("fingerprint is not present for partition %s", partition)
         property_id, fingerprint = "unknown", "unknown"
       else:
         property_id = present_props[0]
-        fingerprint = partition_props.GetProp(property_id)
+        fingerprint = build_props[property_id]
       care_map_list += [property_id, fingerprint]
 
   if not care_map_list:
@@ -761,29 +732,26 @@ def AddImagesToTargetFiles(filename):
   OPTIONS.info_dict = common.LoadInfoDict(OPTIONS.input_tmp, repacking=True)
 
   has_recovery = OPTIONS.info_dict.get("no_recovery") != "true"
-  has_boot = OPTIONS.info_dict.get("no_boot") != "true"
-  has_vendor_boot = OPTIONS.info_dict.get("vendor_boot") == "true"
 
-  # {vendor,odm,product,system_ext}.img are unlike system.img or
+  # {vendor,odm,product,product_services}.img are unlike system.img or
   # system_other.img. Because it could be built from source, or dropped into
   # target_files.zip as a prebuilt blob. We consider either of them as
-  # {vendor,product,system_ext}.img being available, which could be
+  # {vendor,product,product_services}.img being available, which could be
   # used when generating vbmeta.img for AVB.
-  has_vendor = ((os.path.isdir(os.path.join(OPTIONS.input_tmp, "VENDOR")) or
+  has_vendor = (os.path.isdir(os.path.join(OPTIONS.input_tmp, "VENDOR")) or
                 os.path.exists(os.path.join(OPTIONS.input_tmp, "IMAGES",
-                                            "vendor.img"))) and
-                OPTIONS.info_dict.get("vendor_prebuilt_installed") != "true")
+                                            "vendor.img")))
   has_odm = (os.path.isdir(os.path.join(OPTIONS.input_tmp, "ODM")) or
              os.path.exists(os.path.join(OPTIONS.input_tmp, "IMAGES",
                                          "odm.img")))
   has_product = (os.path.isdir(os.path.join(OPTIONS.input_tmp, "PRODUCT")) or
                  os.path.exists(os.path.join(OPTIONS.input_tmp, "IMAGES",
                                              "product.img")))
-  has_system_ext = (os.path.isdir(os.path.join(OPTIONS.input_tmp,
-                                               "SYSTEM_EXT")) or
-                    os.path.exists(os.path.join(OPTIONS.input_tmp,
-                                                "IMAGES",
-                                                "system_ext.img")))
+  has_product_services = (os.path.isdir(os.path.join(OPTIONS.input_tmp,
+                                                     "PRODUCT_SERVICES")) or
+                          os.path.exists(os.path.join(OPTIONS.input_tmp,
+                                                      "IMAGES",
+                                                      "product_services.img")))
   has_system = os.path.isdir(os.path.join(OPTIONS.input_tmp, "SYSTEM"))
   has_system_other = os.path.isdir(os.path.join(OPTIONS.input_tmp,
                                                 "SYSTEM_OTHER"))
@@ -806,45 +774,22 @@ def AddImagesToTargetFiles(filename):
 
   # A map between partition names and their paths, which could be used when
   # generating AVB vbmeta image.
-  partitions = {}
+  partitions = dict()
 
   def banner(s):
     logger.info("\n\n++++ %s  ++++\n\n", s)
 
-  boot_image = None
-  if has_boot:
-    banner("boot")
-    boot_images = OPTIONS.info_dict.get("boot_images")
-    if boot_images is None:
-      boot_images = "boot.img"
-    for index,b in enumerate(boot_images.split()):
-      # common.GetBootableImage() returns the image directly if present.
-      boot_image = common.GetBootableImage(
-          "IMAGES/" + b, b, OPTIONS.input_tmp, "BOOT")
-      # boot.img may be unavailable in some targets (e.g. aosp_arm64).
-      if boot_image:
-        boot_image_path = os.path.join(OPTIONS.input_tmp, "IMAGES", b)
-        # Although multiple boot images can be generated, include the image
-        # descriptor of only the first boot image in vbmeta
-        if index == 0:
-          partitions['boot'] = boot_image_path
-        if not os.path.exists(boot_image_path):
-          boot_image.WriteToDir(OPTIONS.input_tmp)
-          if output_zip:
-            boot_image.AddToZip(output_zip)
-
-  if has_vendor_boot:
-    banner("vendor_boot")
-    vendor_boot_image = common.GetVendorBootImage(
-        "IMAGES/vendor_boot.img", "vendor_boot.img", OPTIONS.input_tmp,
-        "VENDOR_BOOT")
-    if vendor_boot_image:
-      partitions['vendor_boot'] = os.path.join(OPTIONS.input_tmp, "IMAGES",
-                                               "vendor_boot.img")
-      if not os.path.exists(partitions['vendor_boot']):
-        vendor_boot_image.WriteToDir(OPTIONS.input_tmp)
-        if output_zip:
-          vendor_boot_image.AddToZip(output_zip)
+  banner("boot")
+  # common.GetBootableImage() returns the image directly if present.
+  boot_image = common.GetBootableImage(
+      "IMAGES/boot.img", "boot.img", OPTIONS.input_tmp, "BOOT")
+  # boot.img may be unavailable in some targets (e.g. aosp_arm64).
+  if boot_image:
+    partitions['boot'] = os.path.join(OPTIONS.input_tmp, "IMAGES", "boot.img")
+    if not os.path.exists(partitions['boot']):
+      boot_image.WriteToDir(OPTIONS.input_tmp)
+      if output_zip:
+        boot_image.AddToZip(output_zip)
 
   recovery_image = None
   if has_recovery:
@@ -862,11 +807,11 @@ def AddImagesToTargetFiles(filename):
       banner("recovery (two-step image)")
       # The special recovery.img for two-step package use.
       recovery_two_step_image = common.GetBootableImage(
-          "OTA/recovery-two-step.img", "recovery-two-step.img",
+          "IMAGES/recovery-two-step.img", "recovery-two-step.img",
           OPTIONS.input_tmp, "RECOVERY", two_step_image=True)
       assert recovery_two_step_image, "Failed to create recovery-two-step.img."
       recovery_two_step_image_path = os.path.join(
-          OPTIONS.input_tmp, "OTA", "recovery-two-step.img")
+          OPTIONS.input_tmp, "IMAGES", "recovery-two-step.img")
       if not os.path.exists(recovery_two_step_image_path):
         recovery_two_step_image.WriteToDir(OPTIONS.input_tmp)
         if output_zip:
@@ -879,16 +824,15 @@ def AddImagesToTargetFiles(filename):
 
   if has_vendor:
     banner("vendor")
-    partitions['vendor'] = AddVendor(
-        output_zip, recovery_img=recovery_image, boot_img=boot_image)
+    partitions['vendor'] = AddVendor(output_zip)
 
   if has_product:
     banner("product")
     partitions['product'] = AddProduct(output_zip)
 
-  if has_system_ext:
-    banner("system_ext")
-    partitions['system_ext'] = AddSystemExt(output_zip)
+  if has_product_services:
+    banner("product_services")
+    partitions['product_services'] = AddProductServices(output_zip)
 
   if has_odm:
     banner("odm")
@@ -912,20 +856,11 @@ def AddImagesToTargetFiles(filename):
     banner("dtbo")
     partitions['dtbo'] = AddDtbo(output_zip)
 
-  # Custom images.
-  custom_partitions = OPTIONS.info_dict.get(
-      "avb_custom_images_partition_list", "").strip().split()
-  for partition_name in custom_partitions:
-    partition_name = partition_name.strip()
-    banner("custom images for " + partition_name)
-    partitions[partition_name] = AddCustomImages(output_zip, partition_name)
-
   if OPTIONS.info_dict.get("avb_enable") == "true":
     # vbmeta_partitions includes the partitions that should be included into
     # top-level vbmeta.img, which are the ones that are not included in any
     # chained VBMeta image plus the chained VBMeta images themselves.
-    # Currently custom_partitions are all chained to VBMeta image.
-    vbmeta_partitions = common.AVB_PARTITIONS[:] + tuple(custom_partitions)
+    vbmeta_partitions = common.AVB_PARTITIONS[:]
 
     vbmeta_system = OPTIONS.info_dict.get("avb_vbmeta_system", "").strip()
     if vbmeta_system:

@@ -24,8 +24,7 @@ import random
 import common
 import sparse_img
 from rangelib import RangeSet
-from test_utils import (
-    get_testdata_dir, ReleaseToolsTestCase, SkipIfExternalToolsUnavailable)
+from test_utils import get_testdata_dir, ReleaseToolsTestCase
 from verity_utils import (
     CreateHashtreeInfoGenerator, CreateVerityImageBuilder, HashtreeInfo,
     VerifiedBootVersion1HashtreeInfoGenerator)
@@ -87,7 +86,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
 
     return output_file
 
-  @SkipIfExternalToolsUnavailable()
   def test_CreateHashtreeInfoGenerator(self):
     image_file = sparse_img.SparseImage(self._GenerateImage())
 
@@ -98,7 +96,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
     self.assertEqual(self.partition_size, generator.partition_size)
     self.assertTrue(generator.fec_supported)
 
-  @SkipIfExternalToolsUnavailable()
   def test_DecomposeSparseImage(self):
     image_file = sparse_img.SparseImage(self._GenerateImage())
 
@@ -109,7 +106,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
     self.assertEqual(12288, generator.hashtree_size)
     self.assertEqual(32768, generator.metadata_size)
 
-  @SkipIfExternalToolsUnavailable()
   def test_ParseHashtreeMetadata(self):
     image_file = sparse_img.SparseImage(self._GenerateImage())
     generator = VerifiedBootVersion1HashtreeInfoGenerator(
@@ -124,7 +120,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
     self.assertEqual(self.fixed_salt, generator.hashtree_info.salt)
     self.assertEqual(self.expected_root_hash, generator.hashtree_info.root_hash)
 
-  @SkipIfExternalToolsUnavailable()
   def test_ValidateHashtree_smoke(self):
     generator = VerifiedBootVersion1HashtreeInfoGenerator(
         self.partition_size, 4096, True)
@@ -140,7 +135,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
 
     self.assertTrue(generator.ValidateHashtree())
 
-  @SkipIfExternalToolsUnavailable()
   def test_ValidateHashtree_failure(self):
     generator = VerifiedBootVersion1HashtreeInfoGenerator(
         self.partition_size, 4096, True)
@@ -156,7 +150,6 @@ class VerifiedBootVersion1HashtreeInfoGeneratorTest(ReleaseToolsTestCase):
 
     self.assertFalse(generator.ValidateHashtree())
 
-  @SkipIfExternalToolsUnavailable()
   def test_Generate(self):
     image_file = sparse_img.SparseImage(self._GenerateImage())
     generator = CreateHashtreeInfoGenerator('system', 4096, self.prop_dict)
@@ -197,7 +190,6 @@ class VerifiedBootVersion1VerityImageBuilderTest(ReleaseToolsTestCase):
     del prop_dict['verity_block_device']
     self.assertIsNone(CreateVerityImageBuilder(prop_dict))
 
-  @SkipIfExternalToolsUnavailable()
   def test_CalculateMaxImageSize(self):
     verity_image_builder = CreateVerityImageBuilder(self.DEFAULT_PROP_DICT)
     size = verity_image_builder.CalculateMaxImageSize()
@@ -226,13 +218,11 @@ class VerifiedBootVersion1VerityImageBuilderTest(ReleaseToolsTestCase):
     cmd = ['verity_verifier', image, '-mincrypt', verify_key]
     common.RunAndCheckOutput(cmd)
 
-  @SkipIfExternalToolsUnavailable()
   def test_Build(self):
     self._BuildAndVerify(
         self.DEFAULT_PROP_DICT,
         os.path.join(get_testdata_dir(), 'testkey_mincrypt'))
 
-  @SkipIfExternalToolsUnavailable()
   def test_Build_SanityCheck(self):
     # A sanity check for the test itself: the image shouldn't be verifiable
     # with wrong key.
@@ -242,7 +232,6 @@ class VerifiedBootVersion1VerityImageBuilderTest(ReleaseToolsTestCase):
         self.DEFAULT_PROP_DICT,
         os.path.join(get_testdata_dir(), 'verity_mincrypt'))
 
-  @SkipIfExternalToolsUnavailable()
   def test_Build_FecDisabled(self):
     prop_dict = copy.deepcopy(self.DEFAULT_PROP_DICT)
     del prop_dict['verity_fec']
@@ -250,7 +239,6 @@ class VerifiedBootVersion1VerityImageBuilderTest(ReleaseToolsTestCase):
         prop_dict,
         os.path.join(get_testdata_dir(), 'testkey_mincrypt'))
 
-  @SkipIfExternalToolsUnavailable()
   def test_Build_SquashFs(self):
     verity_image_builder = CreateVerityImageBuilder(self.DEFAULT_PROP_DICT)
     verity_image_builder.CalculateMaxImageSize()
@@ -291,7 +279,6 @@ class VerifiedBootVersion2VerityImageBuilderTest(ReleaseToolsTestCase):
     verity_image_builder = CreateVerityImageBuilder(prop_dict)
     self.assertIsNone(verity_image_builder)
 
-  @SkipIfExternalToolsUnavailable()
   def test_Build(self):
     prop_dict = copy.deepcopy(self.DEFAULT_PROP_DICT)
     verity_image_builder = CreateVerityImageBuilder(prop_dict)

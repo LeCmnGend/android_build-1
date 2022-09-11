@@ -29,12 +29,14 @@ PRODUCT_PACKAGES += \
     drmserver \
     ethernet-service \
     fsck.f2fs \
+    HTMLViewer \
     libfilterpack_imageproc \
     libwebviewchromium_loader \
     libwebviewchromium_plat_support \
     make_f2fs \
     requestsync \
     StatementService \
+    vndk_snapshot_package \
 
 PRODUCT_HOST_PACKAGES += \
     fsck.f2fs \
@@ -49,15 +51,11 @@ endif
 
 # The order here is the same order they end up on the classpath, so it matters.
 PRODUCT_SYSTEM_SERVER_JARS := \
-    com.android.location.provider \
+    org.lineageos.platform \
     services \
-    ethernet-service
-
-# system server jars which are updated via apex modules.
-# The values should be of the format <apex name>:<jar name>
-PRODUCT_UPDATABLE_SYSTEM_SERVER_JARS := \
-    com.android.permission:service-permission \
-    com.android.ipsec:android.net.ipsec.ike \
+    ethernet-service \
+    wifi-service \
+    com.android.location.provider \
 
 PRODUCT_COPY_FILES += \
     system/core/rootdir/etc/public.libraries.android.txt:system/etc/public.libraries.txt

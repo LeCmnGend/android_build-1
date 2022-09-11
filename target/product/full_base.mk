@@ -25,8 +25,7 @@ PRODUCT_PACKAGES := \
 
 PRODUCT_PACKAGES += \
     LiveWallpapersPicker \
-    PhotoTable \
-    preinstalled-packages-platform-full-base.xml
+    PhotoTable
 
 # Bluetooth:
 #   audio.a2dp.default is a system module. Generic system image includes
@@ -42,7 +41,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     netutils-wrapper-1.0
 
-ifeq ($(SUPERIOR_BUILD),)
+ifeq ($(RR_BUILD),)
 # Additional settings used in all AOSP builds
 PRODUCT_PROPERTY_OVERRIDES := \
     ro.config.ringtone=Ring_Synth_04.ogg \
@@ -53,7 +52,7 @@ endif
 PRODUCT_LOCALES := en_US
 
 # Get some sounds
-ifeq ($(SUPERIOR_BUILD),)
+ifeq ($(RR_BUILD),)
 $(call inherit-product-if-exists, frameworks/base/data/sounds/AllAudio.mk)
 else
 $(call inherit-product-if-exists, frameworks/base/data/sounds/AudioPackage14.mk)

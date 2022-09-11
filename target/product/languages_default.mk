@@ -104,7 +104,7 @@ PRODUCT_LOCALES := \
         zh_TW \
         zu_ZA \
 
-# specific languages
+# LineageOS specific languages
 PRODUCT_LOCALES += \
         ast_ES \
         gd_GB \

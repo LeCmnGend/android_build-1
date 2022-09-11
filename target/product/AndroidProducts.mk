@@ -43,7 +43,6 @@ PRODUCT_MAKEFILES := \
 
 else
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/aosp_64bitonly_x86_64.mk \
     $(LOCAL_DIR)/aosp_arm64_ab.mk \
     $(LOCAL_DIR)/aosp_arm64.mk \
     $(LOCAL_DIR)/aosp_arm_ab.mk \
@@ -60,9 +59,6 @@ PRODUCT_MAKEFILES := \
     $(LOCAL_DIR)/gsi_arm64.mk \
     $(LOCAL_DIR)/mainline_arm64.mk \
     $(LOCAL_DIR)/mainline_system_arm64.mk \
-    $(LOCAL_DIR)/mainline_system_x86.mk \
-    $(LOCAL_DIR)/mainline_system_x86_arm.mk \
-    $(LOCAL_DIR)/mainline_system_x86_64.mk \
     $(LOCAL_DIR)/sdk_arm64.mk \
     $(LOCAL_DIR)/sdk.mk \
     $(LOCAL_DIR)/sdk_phone_arm64.mk \

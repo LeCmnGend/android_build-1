@@ -3,7 +3,6 @@
 # LOCAL_SOONG_LINK_TYPE
 # LOCAL_SOONG_TOC
 # LOCAL_SOONG_UNSTRIPPED_BINARY
-# LOCAL_SOONG_VNDK_VERSION : means the version of VNDK where this module belongs
 
 ifneq ($(LOCAL_MODULE_MAKEFILE),$(SOONG_ANDROID_MK))
   $(call pretty-error,soong_cc_prebuilt.mk may only be used from Soong)
@@ -31,16 +30,23 @@ else
   $(call pretty-error,Unsupported LOCAL_MODULE_$(my_prefix)ARCH=$(LOCAL_MODULE_$(my_prefix)ARCH))
 endif
 
-# Don't install static libraries by default.
-ifndef LOCAL_UNINSTALLABLE_MODULE
-  ifeq (STATIC_LIBRARIES,$(LOCAL_MODULE_CLASS))
-    LOCAL_UNINSTALLABLE_MODULE := true
+skip_module :=
+ifeq ($(TARGET_TRANSLATE_2ND_ARCH),true)
+  ifndef LOCAL_IS_HOST_MODULE
+    ifdef LOCAL_2ND_ARCH_VAR_PREFIX
+      # Only support shared and static libraries and tests for translated arch
+      ifeq ($(filter SHARED_LIBRARIES STATIC_LIBRARIES HEADER_LIBRARIES NATIVE_TESTS,$(LOCAL_MODULE_CLASS)),)
+        skip_module := true
+      endif
+    endif
   endif
 endif
 
-# Don't install modules of current VNDK when it is told so
-ifeq ($(TARGET_SKIP_CURRENT_VNDK),true)
-  ifeq ($(LOCAL_SOONG_VNDK_VERSION),$(PLATFORM_VNDK_VERSION))
+ifndef skip_module
+
+# Don't install static libraries by default.
+ifndef LOCAL_UNINSTALLABLE_MODULE
+  ifeq (STATIC_LIBRARIES,$(LOCAL_MODULE_CLASS))
     LOCAL_UNINSTALLABLE_MODULE := true
   endif
 endif
@@ -51,9 +57,16 @@ include $(BUILD_SYSTEM)/base_rules.mk
 
 ifneq ($(filter STATIC_LIBRARIES SHARED_LIBRARIES HEADER_LIBRARIES,$(LOCAL_MODULE_CLASS)),)
   # Soong module is a static or shared library
-  EXPORTS_LIST += $(intermediates)
-  EXPORTS.$(intermediates).FLAGS := $(LOCAL_EXPORT_CFLAGS)
-  EXPORTS.$(intermediates).DEPS := $(LOCAL_EXPORT_C_INCLUDE_DEPS)
+  export_includes := $(intermediates)/export_includes
+  $(export_includes): PRIVATE_EXPORT_CFLAGS := $(LOCAL_EXPORT_CFLAGS)
+  $(export_includes): $(LOCAL_EXPORT_C_INCLUDE_DEPS)
+	@echo Export includes file: $< -- $@
+	$(hide) mkdir -p $(dir $@) && rm -f $@
+  ifdef LOCAL_EXPORT_CFLAGS
+	$(hide) echo "$(PRIVATE_EXPORT_CFLAGS)" >$@
+  else
+	$(hide) touch $@
+  endif
 
   ifdef LOCAL_SOONG_TOC
     $(eval $(call copy-one-file,$(LOCAL_SOONG_TOC),$(LOCAL_BUILT_MODULE).toc))
@@ -75,24 +88,17 @@ endif
 ifdef LOCAL_USE_VNDK
   ifneq ($(LOCAL_VNDK_DEPEND_ON_CORE_VARIANT),true)
     name_without_suffix := $(patsubst %.vendor,%,$(LOCAL_MODULE))
-    ifneq ($(name_without_suffix),$(LOCAL_MODULE))
+    ifneq ($(name_without_suffix),$(LOCAL_MODULE)
       SPLIT_VENDOR.$(LOCAL_MODULE_CLASS).$(name_without_suffix) := 1
-    else
-      name_without_suffix := $(patsubst %.product,%,$(LOCAL_MODULE))
-      ifneq ($(name_without_suffix),$(LOCAL_MODULE))
-        SPLIT_PRODUCT.$(LOCAL_MODULE_CLASS).$(name_without_suffix) := 1
-      endif
     endif
     name_without_suffix :=
   endif
 endif
 
 # Check prebuilt ELF binaries.
-ifdef LOCAL_INSTALLED_MODULE
-  ifneq ($(LOCAL_CHECK_ELF_FILES),)
-    my_prebuilt_src_file := $(LOCAL_PREBUILT_MODULE_FILE)
-    include $(BUILD_SYSTEM)/check_elf_file.mk
-  endif
+ifneq ($(LOCAL_CHECK_ELF_FILES),)
+my_prebuilt_src_file := $(LOCAL_PREBUILT_MODULE_FILE)
+include $(BUILD_SYSTEM)/check_elf_file.mk
 endif
 
 # The real dependency will be added after all Android.mks are loaded and the install paths
@@ -109,43 +115,39 @@ ifdef LOCAL_INSTALLED_MODULE
   endif
 endif
 
-my_check_same_vndk_variants :=
-ifeq ($(LOCAL_CHECK_SAME_VNDK_VARIANTS),true)
-  ifeq ($(filter hwaddress address, $(SANITIZE_TARGET)),)
-    my_check_same_vndk_variants := true
-  endif
-endif
+ifeq ($(LOCAL_VNDK_DEPEND_ON_CORE_VARIANT),true)
+  # Add $(LOCAL_BUILT_MODULE) as a dependency to no_vendor_variant_vndk_check so
+  # that the vendor variant will be built and checked against the core variant.
+  no_vendor_variant_vndk_check: $(LOCAL_BUILT_MODULE)
 
-ifeq ($(my_check_same_vndk_variants),true)
-  same_vndk_variants_stamp := $(intermediates)/same_vndk_variants.timestamp
-
-  my_core_register_name := $(subst .vendor,,$(subst .product,,$(my_register_name)))
+  my_core_register_name := $(subst .vendor,,$(my_register_name))
   my_core_variant_files := $(call module-target-built-files,$(my_core_register_name))
   my_core_shared_lib := $(sort $(filter %.so,$(my_core_variant_files)))
+  $(LOCAL_BUILT_MODULE): PRIVATE_CORE_VARIANT := $(my_core_shared_lib)
 
-  $(same_vndk_variants_stamp): PRIVATE_CORE_VARIANT := $(my_core_shared_lib)
-  $(same_vndk_variants_stamp): PRIVATE_VENDOR_VARIANT := $(LOCAL_PREBUILT_MODULE_FILE)
-  $(same_vndk_variants_stamp): PRIVATE_TOOLS_PREFIX := $($(LOCAL_2ND_ARCH_VAR_PREFIX)$(my_prefix)TOOLS_PREFIX)
-
-  $(same_vndk_variants_stamp): $(my_core_shared_lib) $(LOCAL_PREBUILT_MODULE_FILE)
-	$(call verify-vndk-libs-identical,\
-	    $(PRIVATE_CORE_VARIANT),\
-	    $(PRIVATE_VENDOR_VARIANT),\
-	    $(PRIVATE_TOOLS_PREFIX))
-	touch $@
-
-  $(LOCAL_BUILT_MODULE): $(same_vndk_variants_stamp)
+  # The built vendor variant library needs to depend on the built core variant
+  # so that we can perform identity check against the core variant.
+  $(LOCAL_BUILT_MODULE): $(my_core_shared_lib)
 endif
 
+ifeq ($(LOCAL_VNDK_DEPEND_ON_CORE_VARIANT),true)
+$(LOCAL_BUILT_MODULE): $(LOCAL_PREBUILT_MODULE_FILE) $(LIBRARY_IDENTITY_CHECK_SCRIPT)
+	$(call verify-vndk-libs-identical,\
+		$(PRIVATE_CORE_VARIANT),\
+		$<,\
+		$($(LOCAL_2ND_ARCH_VAR_PREFIX)$(my_prefix)TOOLS_PREFIX))
+	$(copy-file-to-target)
+else
 $(LOCAL_BUILT_MODULE): $(LOCAL_PREBUILT_MODULE_FILE)
 	$(transform-prebuilt-to-target)
+endif
 ifneq ($(filter EXECUTABLES NATIVE_TESTS,$(LOCAL_MODULE_CLASS)),)
 	$(hide) chmod +x $@
 endif
 
 ifndef LOCAL_IS_HOST_MODULE
   ifdef LOCAL_SOONG_UNSTRIPPED_BINARY
-    ifneq ($(LOCAL_UNINSTALLABLE_MODULE),true)
+    ifneq ($(LOCAL_VNDK_DEPEND_ON_CORE_VARIANT),true)
       my_symbol_path := $(if $(LOCAL_SOONG_SYMBOL_PATH),$(LOCAL_SOONG_SYMBOL_PATH),$(my_module_path))
       # Store a copy with symbols for symbolic debugging
       my_unstripped_path := $(TARGET_OUT_UNSTRIPPED)/$(patsubst $(PRODUCT_OUT)/%,%,$(my_symbol_path))
@@ -218,9 +220,7 @@ $(LOCAL_BUILT_MODULE): $(LOCAL_ADDITIONAL_DEPENDENCIES)
 #
 # Filter out some NDK libraries that are not being exported.
 my_static_libraries := \
-    $(filter-out ndk_libc++_static ndk_libc++abi ndk_libandroid_support ndk_libunwind \
-      ndk_libc++_static.native_bridge ndk_libc++abi.native_bridge \
-      ndk_libandroid_support.native_bridge ndk_libunwind.native_bridge, \
+    $(filter-out ndk_libc++_static ndk_libc++abi ndk_libandroid_support ndk_libunwind, \
       $(LOCAL_STATIC_LIBRARIES))
 installed_static_library_notice_file_targets := \
     $(foreach lib,$(my_static_libraries) $(LOCAL_WHOLE_STATIC_LIBRARIES), \
@@ -229,8 +229,6 @@ installed_static_library_notice_file_targets := \
 $(notice_target): | $(installed_static_library_notice_file_targets)
 $(LOCAL_INSTALLED_MODULE): | $(notice_target)
 
-# Reinstall shared library dependencies of fuzz targets to /data/fuzz/ (for
-# target) or /data/ (for host).
-ifdef LOCAL_IS_FUZZ_TARGET
-$(LOCAL_INSTALLED_MODULE): $(LOCAL_FUZZ_INSTALLED_SHARED_DEPS)
-endif
+endif # !skip_module
+
+skip_module :=

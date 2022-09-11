@@ -11,22 +11,18 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - tapas:      tapas [<App1> <App2> ...] [arm|x86|mips|arm64|x86_64|mips64] [eng|userdebug|user]
 - croot:      Changes directory to the top of the tree, or a subdirectory thereof.
 - m:          Makes from the top of the tree.
-- mm:         Builds and installs all of the modules in the current directory, and their
-              dependencies.
-- mmm:        Builds and installs all of the modules in the supplied directories, and their
-              dependencies.
+- mm:         Builds all of the modules in the current directory, but not their dependencies.
+- mmm:        Builds all of the modules in the supplied directories, but not their dependencies.
               To limit the modules being built use the syntax: mmm dir/:target1,target2.
-- mma:        Same as 'mm'
-- mmma:       Same as 'mmm'
+- mma:        Builds all of the modules in the current directory, and their dependencies.
+- mmma:       Builds all of the modules in the supplied directories, and their dependencies.
 - provision:  Flash device with all required partitions. Options will be passed on to fastboot.
 - cgrep:      Greps on all local C/C++ files.
 - ggrep:      Greps on all local Gradle files.
-- gogrep:     Greps on all local Go files.
 - jgrep:      Greps on all local Java files.
 - resgrep:    Greps on all local res/*.xml files.
 - mangrep:    Greps on all local AndroidManifest.xml files.
-- mgrep:      Greps on all local Makefiles and *.bp files.
-- owngrep:    Greps on all local OWNERS files.
+- mgrep:      Greps on all local Makefiles files.
 - sepgrep:    Greps on all local sepolicy files.
 - sgrep:      Greps on all local source files.
 - godir:      Go to the directory containing a file.
@@ -35,8 +31,16 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - pathmod:    Get the directory containing a module.
 - refreshmod: Refresh list of modules for allmod/gomod.
 
+EOF
+
+    __print_lineage_functions_help
+
+cat <<EOF
+
 Environment options:
-- SANITIZE_HOST: Set to 'address' to use ASAN for all host modules.
+- SANITIZE_HOST: Set to 'true' to use ASAN for all host modules. Note that
+                 ASAN_OPTIONS=detect_leaks=0 will be set by default until the
+                 build is leak-check clean.
 - ANDROID_QUIET_BUILD: set to 'true' to display only the essential messages.
 
 Look at the source to view more functions. The complete list is:
@@ -44,7 +48,7 @@ EOF
     local T=$(gettop)
     local A=""
     local i
-    for i in `cat $T/build/envsetup.sh | sed -n "/^[[:blank:]]*function /s/function \([a-z_]*\).*/\1/p" | sort | uniq`; do
+    for i in `cat $T/build/envsetup.sh $T/vendor/rr/build/envsetup.sh | sed -n "/^[[:blank:]]*function /s/function \([a-z_]*\).*/\1/p" | sort | uniq`; do
       A="$A $i"
     done
     echo $A
@@ -55,8 +59,8 @@ function build_build_var_cache()
 {
     local T=$(gettop)
     # Grep out the variable names from the script.
-    cached_vars=(`cat $T/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`)
-    cached_abs_vars=(`cat $T/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_abs_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`)
+    cached_vars=(`cat $T/build/envsetup.sh $T/vendor/rr/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`)
+    cached_abs_vars=(`cat $T/build/envsetup.sh $T/vendor/rr/build/envsetup.sh | tr '()' '  ' | awk '{for(i=1;i<=NF;i++) if($i~/get_abs_build_var/) print $(i+1)}' | sort -u | tr '\n' ' '`)
     # Call the build system to dump the "<val>=<value>" pairs as a shell script.
     build_dicts_script=`\builtin cd $T; build/soong/soong_ui.bash --dumpvars-mode \
                         --vars="${cached_vars[*]}" \
@@ -138,12 +142,12 @@ function check_product()
         echo "Couldn't locate the top of the tree.  Try setting TOP." >&2
         return
     fi
-    if (echo -n $1 | grep -q -e "^superior_") ; then
-        SUPERIOR_BUILD=$(echo -n $1 | sed -e 's/^superior_//g')
+    if (echo -n $1 | grep -q -e "^rr_") ; then
+        RR_BUILD=$(echo -n $1 | sed -e 's/^rr_//g')
     else
-        SUPERIOR_BUILD=
+        RR_BUILD=
     fi
-    export SUPERIOR_BUILD
+    export RR_BUILD
 
         TARGET_PRODUCT=$1 \
         TARGET_BUILD_VARIANT= \
@@ -255,14 +259,8 @@ function setpaths()
     if [ -n "$ANDROID_TOOLCHAIN_2ND_ARCH" ]; then
         ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ANDROID_TOOLCHAIN_2ND_ARCH
     fi
-    ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ANDROID_DEV_SCRIPTS
-
-    # Append llvm binutils prebuilts path to ANDROID_BUILD_PATHS.
-    local ANDROID_LLVM_BINUTILS=$(get_abs_build_var ANDROID_CLANG_PREBUILTS)/llvm-binutils-stable
-    ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ANDROID_LLVM_BINUTILS
-
-    # Set up ASAN_SYMBOLIZER_PATH for SANITIZE_HOST=address builds.
-    export ASAN_SYMBOLIZER_PATH=$ANDROID_LLVM_BINUTILS/llvm-symbolizer
+    ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ANDROID_DEV_SCRIPTS:
+    export ANDROID_BUILD_PATHS
 
     # If prebuilts/android-emulator/<system>/ exists, prepend it to our PATH
     # to ensure that the corresponding 'emulator' binaries are used.
@@ -278,16 +276,16 @@ function setpaths()
             ;;
     esac
     if [ -n "$ANDROID_EMULATOR_PREBUILTS" -a -d "$ANDROID_EMULATOR_PREBUILTS" ]; then
-        ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ANDROID_EMULATOR_PREBUILTS
+        ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS$ANDROID_EMULATOR_PREBUILTS:
         export ANDROID_EMULATOR_PREBUILTS
     fi
 
     # Append asuite prebuilts path to ANDROID_BUILD_PATHS.
     local os_arch=$(get_build_var HOST_PREBUILT_TAG)
-    local ACLOUD_PATH="$T/prebuilts/asuite/acloud/$os_arch"
-    local AIDEGEN_PATH="$T/prebuilts/asuite/aidegen/$os_arch"
-    local ATEST_PATH="$T/prebuilts/asuite/atest/$os_arch"
-    export ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS:$ACLOUD_PATH:$AIDEGEN_PATH:$ATEST_PATH:
+    local ACLOUD_PATH="$T/prebuilts/asuite/acloud/$os_arch:"
+    local AIDEGEN_PATH="$T/prebuilts/asuite/aidegen/$os_arch:"
+    local ATEST_PATH="$T/prebuilts/asuite/atest/$os_arch:"
+    export ANDROID_BUILD_PATHS=$ANDROID_BUILD_PATHS$ACLOUD_PATH$AIDEGEN_PATH$ATEST_PATH
 
     export PATH=$ANDROID_BUILD_PATHS$PATH
 
@@ -297,9 +295,6 @@ function setpaths()
     fi
     # and in with the new
     export ANDROID_PYTHONPATH=$T/development/python-packages:
-    if [ -n $VENDOR_PYTHONPATH  ]; then
-        ANDROID_PYTHONPATH=$ANDROID_PYTHONPATH$VENDOR_PYTHONPATH
-    fi
     export PYTHONPATH=$ANDROID_PYTHONPATH$PYTHONPATH
 
     export ANDROID_JAVA_HOME=$(get_abs_build_var ANDROID_JAVA_HOME)
@@ -343,6 +338,7 @@ function set_stuff_for_environment()
 
     # With this environment variable new GCC can apply colors to warnings/errors
     export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+    export ASAN_OPTIONS=detect_leaks=0
 }
 
 function set_sequence_number()
@@ -586,31 +582,13 @@ function print_lunch_menu()
     local uname=$(uname)
     local choices=$(TARGET_BUILD_APPS= get_build_var COMMON_LUNCH_CHOICES)
     echo
-
-    echo ""
-    tput setaf 1;
-    tput bold;
-    echo "  ██████  █    ██  ██▓███  ▓█████  ██▀███   ██▓ ▒█████   ██▀███      ▒█████    ██████ "
-    echo "▒██    ▒  ██  ▓██▒▓██░  ██▒▓█   ▀ ▓██ ▒ ██▒▓██▒▒██▒  ██▒▓██ ▒ ██▒   ▒██▒  ██▒▒██    ▒ "
-    echo "░ ▓██▄   ▓██  ▒██░▓██░ ██▓▒▒███   ▓██ ░▄█ ▒▒██▒▒██░  ██▒▓██ ░▄█ ▒   ▒██░  ██▒░ ▓██▄   "
-    echo "  ▒   ██▒▓▓█  ░██░▒██▄█▓▒ ▒▒▓█  ▄ ▒██▀▀█▄  ░██░▒██   ██░▒██▀▀█▄     ▒██   ██░  ▒   ██▒"
-    echo "▒██████▒▒▒▒█████▓ ▒██▒ ░  ░░▒████▒░██▓ ▒██▒░██░░ ████▓▒░░██▓ ▒██▒   ░ ████▓▒░▒██████▒▒"
-    echo "▒ ▒▓▒ ▒ ░░▒▓▒ ▒ ▒ ▒▓▒░ ░  ░░░ ▒░ ░░ ▒▓ ░▒▓░░▓  ░ ▒░▒░▒░ ░ ▒▓ ░▒▓░   ░ ▒░▒░▒░ ▒ ▒▓▒ ▒ ░"
-    echo "░ ░▒  ░ ░░░▒░ ░ ░ ░▒ ░      ░ ░  ░  ░▒ ░ ▒░ ▒ ░  ░ ▒ ▒░   ░▒ ░ ▒░     ░ ▒ ▒░ ░ ░▒  ░ ░"
-    echo "░  ░  ░   ░░░ ░ ░ ░░          ░     ░░   ░  ▒ ░░ ░ ░ ▒    ░░   ░    ░ ░ ░ ▒  ░  ░  ░  "
-    echo "      ░     ░                 ░  ░   ░      ░      ░ ░     ░            ░ ░           "
-    tput sgr0;
-    echo ""
-    echo "                      Welcome to the device menu                      "
-    echo ""
-    tput bold;
-    echo "     Below are all the devices currently available to be compiled     "
-    tput sgr0;
-    echo ""
+    echo "You're building on" $uname
+    echo
+    echo "Lunch menu... pick a combo:"
 
     local i=1
     local choice
-    for choice in ${choices[@]}
+    for choice in $(echo $choices)
     do
         echo "     $i. $choice"
         i=$(($i+1))
@@ -623,27 +601,11 @@ function lunch()
 {
     local answer
 
-    choices=()
-    for makefile_target in $(TARGET_BUILD_APPS= get_build_var COMMON_LUNCH_CHOICES)
-    do
-        choices+=($makefile_target)
-    done
-    for other_target in ${lunch_others_targets[@]}
-    do
-        if [[ " ${choices[*]} " != *"$other_target"* ]];
-        then
-            choices+=($other_target)
-        fi
-    done
-
     if [ "$1" ] ; then
         answer=$1
     else
         print_lunch_menu
-        tput setaf 2;
-        tput bold;
-        echo -n "Go ahead and pick a number or enter lunch combo(superior_device-userdebug)... "
-        tput sgr0;
+        echo -n "Which would you like? [aosp_arm-eng] "
         read answer
     fi
 
@@ -654,6 +616,7 @@ function lunch()
         selection=aosp_arm-eng
     elif (echo -n $answer | grep -q -e "^[0-9][0-9]*$")
     then
+        local choices=($(TARGET_BUILD_APPS= get_build_var COMMON_LUNCH_CHOICES))
         if [ $answer -le ${#choices[@]} ]
         then
             # array in zsh starts from 1 instead of 0.
@@ -683,25 +646,23 @@ function lunch()
 
     if [ -z "$product" ]
     then
-        echo ""
-        echo "Come on man, pay attention to what you're doing"
-        echo ""
+        echo
+        echo "Invalid lunch combo: $selection"
         return 1
     fi
 
-    check_product $product
-    if [ $? -ne 0 ]
+    if ! check_product $product
     then
-        # if we can't find a product, try to grab it off the SuperiorOS Devices GitHub
+        # if we can't find a product, try to grab it off the LineageOS GitHub
         T=$(gettop)
         cd $T > /dev/null
-        vendor/superior/build/tools/roomservice.py $product
+        vendor/rr/build/tools/roomservice.py $product
         cd - > /dev/null
         check_product $product
     else
         T=$(gettop)
         cd $T > /dev/null
-        vendor/superior/build/tools/roomservice.py $product true
+        vendor/rr/build/tools/roomservice.py $product true
         cd - > /dev/null
     fi
 
@@ -733,6 +694,8 @@ function lunch()
     export TARGET_BUILD_TYPE=release
 
     echo
+
+    fixup_common_out_dir
 
     set_stuff_for_environment
     printconfig
@@ -1039,12 +1002,6 @@ function ggrep()
         -exec grep --color -n "$@" {} +
 }
 
-function gogrep()
-{
-    find . -name .repo -prune -o -name .git -prune -o -name out -prune -o -type f -name "*\.go" \
-        -exec grep --color -n "$@" {} +
-}
-
 function jgrep()
 {
     find . -name .repo -prune -o -name .git -prune -o -name out -prune -o -type f -name "*\.java" \
@@ -1071,12 +1028,6 @@ function mangrep()
         -exec grep --color -n "$@" {} +
 }
 
-function owngrep()
-{
-    find . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o -type f -name 'OWNERS' \
-        -exec grep --color -n "$@" {} +
-}
-
 function sepgrep()
 {
     find . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o -name sepolicy -type d \
@@ -1093,7 +1044,7 @@ case `uname -s` in
     Darwin)
         function mgrep()
         {
-            find -E . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o \( -iregex '.*/(Makefile|Makefile\..*|.*\.make|.*\.mak|.*\.mk|.*\.bp)' -o -regex '(.*/)?(build|soong)/.*[^/]*\.go' \) -type f \
+            find -E . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o \( -iregex '.*/(Makefile|Makefile\..*|.*\.make|.*\.mak|.*\.mk|.*\.bp)' -o -regex '(.*/)?soong/[^/]*.go' \) -type f \
                 -exec grep --color -n "$@" {} +
         }
 
@@ -1107,7 +1058,7 @@ case `uname -s` in
     *)
         function mgrep()
         {
-            find . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o \( -regextype posix-egrep -iregex '(.*\/Makefile|.*\/Makefile\..*|.*\.make|.*\.mak|.*\.mk|.*\.bp)' -o -regextype posix-extended -regex '(.*/)?(build|soong)/.*[^/]*\.go' \) -type f \
+            find . -name .repo -prune -o -name .git -prune -o -path ./out -prune -o \( -regextype posix-egrep -iregex '(.*\/Makefile|.*\/Makefile\..*|.*\.make|.*\.mak|.*\.mk|.*\.bp)' -o -regextype posix-extended -regex '(.*/)?soong/[^/]*.go' \) -type f \
                 -exec grep --color -n "$@" {} +
         }
 
@@ -1393,7 +1344,7 @@ function refreshmod() {
     mkdir -p $ANDROID_PRODUCT_OUT || return 1
 
     # Note, can't use absolute path because of the way make works.
-    m $(get_build_var PRODUCT_OUT)/module-info.json \
+    m out/target/product/$(get_build_var TARGET_DEVICE)/module-info.json \
         > $ANDROID_PRODUCT_OUT/module-info.json.build.log 2>&1
 }
 
@@ -1464,18 +1415,6 @@ function gomod() {
 function _complete_android_module_names() {
     local word=${COMP_WORDS[COMP_CWORD]}
     COMPREPLY=( $(allmod | grep -E "^$word") )
-}
-
-# Make using all available CPUs
-function mka() {
-    case `uname -s` in
-        Darwin)
-            m "$@" -j `sysctl hw.ncpu|cut -d" " -f2`
-            ;;
-        *)
-            m "$@" -j `cat /proc/cpuinfo | grep "^processor" | wc -l`
-            ;;
-    esac
 }
 
 # Print colored exit condition
@@ -1649,7 +1588,6 @@ function validate_current_shell() {
 #
 # This allows loading only approved vendorsetup.sh files
 function source_vendorsetup() {
-    unset VENDOR_PYTHONPATH
     allowed=
     for f in $(find -L device vendor product -maxdepth 4 -name 'allowed-vendorsetup_sh-files' 2>/dev/null | sort); do
         if [ -n "$allowed" ]; then
@@ -1680,22 +1618,6 @@ validate_current_shell
 source_vendorsetup
 addcompletions
 
-function repopick() {
-    T=$(gettop)
-    $T/vendor/superior/build/tools/repopick.py $@
-}
-
-# check and set ccache path on envsetup
-if [ -z ${CCACHE_EXEC} ]; then
-    ccache_path=$(which ccache)
-    if [ ! -z "$ccache_path" ]; then
-	export USE_CCACHE=1
-        export CCACHE_EXEC="$ccache_path"
-        $ccache_path -o compression=true
-	echo -e "\e[1mccache enabled and \e[32m\e[4mCCACHE_EXEC\e[0m \e[1mhas been set to : \e[4m$ccache_path\e[0m"
-    else
-        echo -e "\e[31m\e[1mccache not found/installed!\e[0m"
-    fi
-fi
-
 export ANDROID_BUILD_TOP=$(gettop)
+
+. $ANDROID_BUILD_TOP/vendor/rr/tools/rr_variant.sh && ./vendor/rr/tools/changelog.sh && . vendor/rr/build/envsetup.sh
